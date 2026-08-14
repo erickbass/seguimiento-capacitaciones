@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguimiento de Eventos de Capacitación - INTECAP</title>
+    <meta name="description" content="Sistema de control y seguimiento de eventos de capacitación para Servicios Empresariales de INTECAP Región Occidente.">
+    <!-- Google Fonts - Lexend (Headings) & Inter (UI/Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Vanilla CSS Stylesheet -->
+    <link rel="stylesheet" href="style.css?v=44">
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-text">
+                    <h1>INTECAP</h1>
+                    <span>Servicios Empresariales Occidente</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" id="btn-nav-dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#eventos" class="nav-item" id="btn-nav-eventos">
+                    <i data-lucide="calendar"></i>
+                    <span>Eventos</span>
+                </a>
+                <a href="#reportes" class="nav-item" id="btn-nav-reportes">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Reportes</span>
+                </a>
+                <a href="#importar" class="nav-item admin-only" id="btn-nav-importar">
+                    <i data-lucide="file-spreadsheet"></i>
+                    <span>Importar Excel</span>
+                </a>
+                <a href="#usuarios" class="nav-item admin-only" id="btn-nav-usuarios">
+                    <i data-lucide="users"></i>
+                    <span>Usuarios</span>
+                </a>
+            </nav>
+            <div class="sidebar-user" id="sidebar-user">
+                <div class="user-avatar" id="sidebar-avatar">A</div>
+                <div class="user-info">
+                    <span class="user-name" id="sidebar-username">Administrador</span>
+                    <span class="user-role" id="sidebar-userrole">Acceso Total</span>
+                </div>
+                <button class="btn-logout" id="btn-logout" title="Cerrar Sesión">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+            <div class="sidebar-footer">
+                <p class="unit-name">Número de eventos</p>
+                <div class="db-status-badge">
+                    <span class="status-dot green"></span>
+                    <span id="db-status-text">Base de datos vacía</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h2 id="page-title">Panel de Control</h2>
+                    <p class="text-muted">Número de eventos - Seguimiento de Capacitaciones</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="btn-download-template" title="Descargar plantilla de Excel recomendada">
+                        <i data-lucide="download"></i>
+                        <span>Descargar Plantilla</span>
+                    </button>
+                    <button class="btn btn-danger admin-only" id="btn-clear-db" style="display: none;">
+                        <i data-lucide="trash-2"></i>
+                        <span>Limpiar Base de Datos</span>
+                    </button>
+                    <div class="theme-toggle">
+                        <button id="theme-btn" title="Cambiar tema">
+                            <i data-lucide="moon" class="dark-icon"></i>
+                            <i data-lucide="sun" class="light-icon" style="display:none;"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Notification Toast -->
+            <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-content">
+                    <i id="toast-icon" data-lucide="info"></i>
+                    <span id="toast-message">Notificación</span>
+                </div>
+            </div>
+
+            <!-- VIEW: Importar Excel (Visible when no data or selected) -->
+            <section id="view-importar" class="content-view">
+                <div class="welcome-card">
+                    <div class="welcome-icon">
+                        <i data-lucide="file-spreadsheet"></i>
+                    </div>
+                    <h3>Bienvenido al Gestor de Capacitaciones</h3>
+                    <p>Para comenzar a visualizar las estadísticas y dar seguimiento a los participantes, carga tu archivo de Excel de control.</p>
+                </div>
+
+                <div class="upload-container">
+                    <div class="drag-drop-zone" id="drop-zone">
+                        <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="file-input">
+                        <i data-lucide="upload-cloud" class="upload-icon"></i>
+                        <h4>Arrastra tu archivo de Excel aquí</h4>
+                        <p class="text-muted">o haz clic para buscar en tu computadora</p>
+                        <span class="file-limits">Soporta archivos .xlsx y .xls</span>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- VIEW: Dashboard (Stats) -->
+            <section id="view-dashboard" class="content-view active">
+                <!-- KPIs Grid -->
+                <div class="kpis-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon blue">
+                            <i data-lucide="award"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <span class="kpi-title">Eventos de Capacitación</span>
+                            <h3 class="kpi-value" id="kpi-total-eventos">0</h3>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon green">
+                            <i data-lucide="users"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <span class="kpi-title">Total de Inscritos</span>
+                            <h3 class="kpi-value" id="kpi-total-inscritos">0</h3>
+                            <span class="kpi-subtitle" id="kpi-inscritos-subtitle">En todos los eventos</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon red" style="background-color: rgba(239, 68, 68, 0.1); color: #EF4444;">
+                            <i data-lucide="alert-triangle"></i>
+                        </div>
+                        <div class="kpi-data">
+                            <span class="kpi-title">Eventos sin Participantes</span>
+                            <h3 class="kpi-value" id="kpi-total-no-inscritos">0</h3>
+                            <span class="kpi-subtitle">Con 0 inscritos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Layout -->
+                <div class="dashboard-charts">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h4>Distribución por Tipo de Evento</h4>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="chart-participantes"></canvas>
+                        </div>
+                </div>
+            </section>
+
+            <!-- VIEW: Eventos (Table & Filters) -->
+            <section id="view-eventos" class="content-view">
+                <!-- Filters Bar -->
+                <div class="filters-card card">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label for="filter-search">Buscar evento o instructor</label>
+                            <div class="search-input-wrapper">
+                                <i data-lucide="search" class="search-icon"></i>
+                                <input type="text" id="filter-search" placeholder="Escribe para buscar...">
+                            </div>
+                        </div>
+                        <div class="filter-group admin-supervisor-only">
+                            <label for="filter-consultor">Consultor a Cargo</label>
+                            <select id="filter-consultor">
+                                <option value="">Todos los consultores</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-instructor">Instructor</label>
+                            <select id="filter-instructor">
+                                <option value="">Todos los instructores</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-fecha-inicio">Desde</label>
+                            <input type="date" id="filter-fecha-inicio">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-fecha-fin">Hasta</label>
+                            <input type="date" id="filter-fecha-fin">
+                        </div>
+                    </div>
+                    <div class="filters-actions">
+                        <button class="btn btn-secondary" id="btn-reset-filters">
+                            <i data-lucide="rotate-ccw"></i>
+                            <span>Limpiar Filtros</span>
+                        </button>
+
+                        <button class="btn btn-primary admin-only" id="btn-add-evento">
+                            <i data-lucide="plus"></i>
+                            <span>Crear Evento</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-views Segmented Control -->
+                <div class="subviews-container">
+                    <button type="button" class="subview-tab active" data-subview="sin-participantes">
+                        <i data-lucide="user-x"></i>
+                        <span>Eventos con Participantes en 0 (Sin Inscritos)</span>
+                    </button>
+                    <button type="button" class="subview-tab" data-subview="con-participantes">
+                        <i data-lucide="users"></i>
+                        <span>Ver Eventos con Participantes</span>
+                    </button>
+                </div>
+
+                <!-- Events Table Card -->
+                <div class="card table-card">
+                    <div class="table-responsive">
+                        <table class="data-table" id="events-table">
+                            <thead>
+                                <tr>
+                                    <th>N° Evento</th>
+                                    <th>Nombre del Evento</th>
+                                    <th>Contraparte</th>
+                                    <th>Consultor</th>
+                                    <th>Instructor</th>
+                                    <th>Fechas (Inicio - Fin)</th>
+                                    <th>Inscritos</th>
+                                    <th>Estado Evento</th>
+                                    <th class="actions-header">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="events-table-body">
+                                <!-- Data rows inserted dynamically -->
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-5">
+                                        No hay datos disponibles. Carga un archivo de Excel para comenzar.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination or Summary Info -->
+                    <div class="table-footer">
+                        <span id="table-showing-text" class="text-muted">Mostrando 0 de 0 eventos</span>
+                        <div class="pagination-buttons">
+                            <!-- Simple navigation if needed, or total count -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: Reportes de Seguimiento (Dinámico) -->
+            <section id="view-reportes" class="content-view">
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: none; padding-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="file-spreadsheet" style="color: var(--intecap-green);"></i>
+                            <h4 style="margin: 0;">Reporte Dinámico de Seguimientos</h4>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+
+                            <button class="btn btn-primary btn-sm" id="btn-export-report">
+                                <i data-lucide="download"></i>
+                                <span>Descargar Reporte (Excel)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin: 10px 0 20px 0;">
+                        Listado consolidado de compromisos, acciones y evidencias de seguimiento registradas por los consultores en el sistema.
+                    </p>
+                    
+                    <!-- Filtros del Reporte -->
+                    <div class="filter-grid" style="margin-bottom: 20px;">
+                        <div class="filter-group">
+                            <label for="report-search">Buscar Evento</label>
+                            <input type="text" id="report-search" placeholder="N° Programa o nombre..." style="width: 100%; padding: 8px 12px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-app); color: var(--text-main); font-size: 0.85rem;">
+                        </div>
+                        <div class="filter-group admin-supervisor-only">
+                            <label for="report-consultor">Filtrar por Consultor</label>
+                            <select id="report-consultor" style="width: 100%; padding: 8px 12px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-app); color: var(--text-main); font-size: 0.85rem;">
+                                <option value="">Todos los Consultores</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="report-contraparte">Filtrar por Contraparte</label>
+                            <select id="report-contraparte" style="width: 100%; padding: 8px 12px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-app); color: var(--text-main); font-size: 0.85rem;">
+                                <option value="">Todas las Empresas</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabla del Reporte -->
+                    <div class="table-responsive">
+                        <table class="data-table" id="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Programa</th>
+                                    <th>Nombre del Evento</th>
+                                    <th>Contraparte</th>
+                                    <th>Consultor</th>
+                                    <th>Instructor</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Usuario</th>
+                                    <th>Compromiso Registrado</th>
+                                    <th class="text-center" style="width: 100px;">Evidencia</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-table-body">
+                                <!-- Cargado dinámicamente en app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="table-footer">
+                        <span id="report-showing-text" class="text-muted">Mostrando 0 registros de seguimiento</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: Gestión de Usuarios (Admin Only) -->
+            <section id="view-usuarios" class="content-view admin-only">
+                <div class="card">
+                    <div class="card-header">
+                        <i data-lucide="users"></i>
+                        <h4>Gestión de Consultores y Contraseñas</h4>
+                    </div>
+                    <p class="text-muted" style="margin-bottom: 20px;">
+                        A continuación se listan las credenciales de acceso de los consultores activos en el sistema y del Administrador. Puedes editar directamente sus contraseñas en la tabla y hacer clic en <strong>Guardar</strong>.
+                    </p>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario / Consultor</th>
+                                    <th>Rol</th>
+                                    <th>Contraseña de Acceso</th>
+                                    <th class="text-center" style="width: 150px;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Cargado dinámicamente en app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: Participant Details & Event Editing -->
+    <div class="modal-backdrop" id="modal-event-detail">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modal-event-title">Detalles del Evento</h3>
+                    <p class="text-muted" id="modal-event-subtitle">N° Evento: - | Consultor: -</p>
+                </div>
+                <button class="modal-close" id="btn-close-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="modal-tab-btn active" data-target="tab-participantes">Participantes</button>
+                <button class="modal-tab-btn" data-target="tab-seguimiento">Seguimiento</button>
+                <button class="modal-tab-btn admin-only" data-target="tab-editar-evento">Editar Evento</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- TAB: Detalles de Inscripción -->
+                <div id="tab-participantes" class="modal-tab-content active">
+                    <div class="stats-summary-grid">
+                        <div class="stats-card">
+                            <span class="stats-label">Nombre del Producto</span>
+                            <h4 id="detail-product-name" class="stats-value">-</h4>
+                        </div>
+                        <div class="stats-card">
+                            <span class="stats-label">Contraparte</span>
+                            <h4 id="detail-contraparte" class="stats-value">-</h4>
+                        </div>
+                        <div class="stats-card">
+                            <span class="stats-label">Estado del Evento</span>
+                            <h4 id="detail-event-status" class="stats-value">-</h4>
+                        </div>
+                        <div class="stats-card">
+                            <span class="stats-label">Instructor Asignado</span>
+                            <h4 id="detail-instructor-name" class="stats-value">-</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Bitácora de Seguimiento -->
+                <div id="tab-seguimiento" class="modal-tab-content">
+                    <div class="card p-4 mb-4">
+                        <h5 class="mb-3" style="font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="plus-circle" style="width: 18px; height: 18px; color: var(--intecap-green);"></i>
+                            Registrar Nuevo Seguimiento
+                        </h5>
+                        <form id="form-add-followup" class="form-grid">
+
+                            <div class="form-group col-span-2">
+                                <label for="followup-note">Detalles del Compromiso (Contraparte y/o Consultor)</label>
+                                <textarea id="followup-note" placeholder="Ej: Compromiso de contraparte o consultor..." rows="3" required></textarea>
+                            </div>
+                            <div class="form-group col-span-2">
+                                <label for="followup-evidence">Subir Evidencia / Imagen (Opcional)</label>
+                                <input type="file" id="followup-evidence" accept="image/*,application/pdf">
+                                <span class="text-muted" style="font-size:0.72rem; display:block; margin-top:4px;">Se permite subir capturas de pantalla, fotos o archivos PDF.</span>
+                            </div>
+                            <div class="form-actions col-span-2" style="margin-top: 8px;">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i data-lucide="save"></i>
+                                    <span>Guardar Seguimiento</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="followup-timeline card p-4">
+                        <h5 class="mb-4" style="font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                            <i data-lucide="history" style="width: 18px; height: 18px; color: var(--intecap-green);"></i>
+                            Historial de Seguimientos
+                        </h5>
+                        <div id="followup-timeline-list" class="timeline">
+                            <!-- Se renderiza dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: Editar Evento -->
+                <div id="tab-editar-evento" class="modal-tab-content">
+                    <form id="form-edit-evento" class="form-grid">
+                        <input type="hidden" id="edit-event-id">
+                        <div class="form-group col-span-2">
+                            <label for="edit-event-name">Nombre del Evento</label>
+                            <input type="text" id="edit-event-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-number">Número de Programa (Evento)</label>
+                            <input type="text" id="edit-event-number" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-producto">Nombre del Producto</label>
+                            <input type="text" id="edit-event-producto" required>
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label for="edit-event-contraparte">Contraparte (Empresa Atendida)</label>
+                            <input type="text" id="edit-event-contraparte" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-consultor">Consultor a Cargo</label>
+                            <input type="text" id="edit-event-consultor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-instructor">Instructor Encargado</label>
+                            <input type="text" id="edit-event-instructor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-start">Fecha Inicio</label>
+                            <input type="date" id="edit-event-start" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-end">Fecha Fin</label>
+                            <input type="date" id="edit-event-end" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-hombres">Hombres Inscritos</label>
+                            <input type="number" id="edit-event-hombres" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-event-mujeres">Mujeres Inscritas</label>
+                            <input type="number" id="edit-event-mujeres" min="0" required>
+                        </div>
+                        <div class="form-group col-span-2">
+                            <label for="edit-event-estado">Estado del Evento</label>
+                            <select id="edit-event-estado">
+                                <option value="Inscrito">Inscrito</option>
+                                <option value="No Inscrito">No Inscrito</option>
+                            </select>
+                        </div>
+                        <div class="form-actions col-span-2">
+                            <button type="button" class="btn btn-danger-outline" id="btn-delete-evento">
+                                <i data-lucide="trash-2"></i>
+                                <span>Eliminar Evento</span>
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i data-lucide="save"></i>
+                                <span>Guardar Cambios</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Crear Nuevo Evento (Separate simplified modal or reuse edit modal structure) -->
+    <div class="modal-backdrop" id="modal-create-event">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h3>Crear Nuevo Evento</h3>
+                    <p class="text-muted">Ingresa los datos para registrar un evento de capacitación manual</p>
+                </div>
+                <button class="modal-close" id="btn-close-create-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="form-create-evento" class="form-grid">
+                    <div class="form-group col-span-2">
+                        <label for="create-event-name">Nombre del Evento</label>
+                        <input type="text" id="create-event-name" placeholder="Ej. Taller de Excel Avanzado" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-number">Número de Programa (Evento)</label>
+                        <input type="text" id="create-event-number" placeholder="Ej. 2026-SE-045" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-producto">Nombre del Producto</label>
+                        <input type="text" id="create-event-producto" placeholder="Ej. Desarrollo Humano" required>
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label for="create-event-contraparte">Contraparte (Empresa Atendida)</label>
+                        <input type="text" id="create-event-contraparte" placeholder="Ej. Banco Industrial, S.A." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-consultor">Consultor a Cargo</label>
+                        <input type="text" id="create-event-consultor" placeholder="Nombre completo" required>
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label for="create-event-instructor">Instructor Encargado</label>
+                        <input type="text" id="create-event-instructor" placeholder="Nombre del instructor" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-start">Fecha Inicio</label>
+                        <input type="date" id="create-event-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-end">Fecha Fin</label>
+                        <input type="date" id="create-event-end" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-hombres">Hombres Inscritos</label>
+                        <input type="number" id="create-event-hombres" min="0" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="create-event-mujeres">Mujeres Inscritas</label>
+                        <input type="number" id="create-event-mujeres" min="0" value="0" required>
+                    </div>
+                    <div class="form-group col-span-2">
+                        <label for="create-event-estado">Estado del Evento</label>
+                        <select id="create-event-estado">
+                            <option value="Inscrito">Inscrito</option>
+                            <option value="No Inscrito">No Inscrito</option>
+                        </select>
+                    </div>
+                    <div class="form-actions col-span-2">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-create">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="plus"></i>
+                            <span>Crear Evento</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN: Login Screen -->
+    <div class="login-screen active" id="login-screen">
+        <div class="login-box">
+            <div class="login-brand">
+                <h2>INTECAP</h2>
+                <p>Servicios Empresariales Occidente</p>
+            </div>
+            
+            <div class="login-card">
+                <h3>Iniciar Sesión</h3>
+                <p class="text-muted mb-4">Selecciona tu rol de acceso para ingresar al sistema</p>
+                
+                <form id="login-form">
+                    <div class="role-selector">
+                        <label class="role-option">
+                            <input type="radio" name="login-role" value="admin" checked>
+                            <div class="role-card">
+                                <i data-lucide="shield-check"></i>
+                                <span>Administrador</span>
+                            </div>
+                        </label>
+                        <label class="role-option">
+                            <input type="radio" name="login-role" value="supervisor">
+                            <div class="role-card">
+                                <i data-lucide="eye"></i>
+                                <span>Supervisor</span>
+                            </div>
+                        </label>
+                        <label class="role-option">
+                            <input type="radio" name="login-role" value="consultor">
+                            <div class="role-card">
+                                <i data-lucide="user"></i>
+                                <span>Consultor</span>
+                            </div>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group mt-4" id="login-consultor-group" style="display: none;">
+                        <label for="login-consultor-select">Selecciona tu Nombre</label>
+                        <select id="login-consultor-select">
+                            <option value="">Cargando consultores...</option>
+                        </select>
+                        <p class="helper-text error-text" id="login-consultor-empty-msg" style="display: none; color: var(--color-danger); font-size: 0.75rem; margin-top: 4px;">
+                            No hay consultores en la base de datos. Ingresa primero como Administrador e importa un archivo de Excel.
+                        </p>
+                    </div>
+                    
+                    <div class="form-group mt-4" id="login-password-group">
+                        <label for="login-password-input">Contraseña de Acceso</label>
+                        <input type="password" id="login-password-input" required placeholder="Ingresa tu contraseña" style="width: 100%; padding: 10px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.9rem;">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-full mt-4" id="btn-login-submit">
+                        <i data-lucide="log-in"></i>
+                        <span>Ingresar al Sistema</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Libraries Loaded from CDN for seamless user execution without local package setup -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+    
+    <!-- Application Logic -->
+    <script src="app.js?v=44"></script>
+</body>
+</html>
