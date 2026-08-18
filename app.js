@@ -2,9 +2,17 @@
 const SUPABASE_URL = 'https://pivngvqanpdwdqklpucw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_8VIqmFG84Vvg2-eeIgpDsg_6s7tAJjP';
 
-const supabase = (window.supabase && window.supabase.createClient) 
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+let supabase = null;
+function getSupabaseClient() {
+    if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            console.warn("Error creando cliente Supabase:", e);
+        }
+    }
+    return supabase;
+}
 
 // IndexedDB Fallback / Local Cache
 const localDb = new Dexie('intecap_capacita_db');
@@ -18,12 +26,12 @@ localDb.version(5).stores({
 const db = {
     events: {
         async toArray() {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { data: events, error } = await supabase.from('events').select('*').order('id', { ascending: false });
+                    const { data: events, error } = await client.from('events').select('*').order('id', { ascending: false });
                     if (!error && events) {
-                        // También obtener los followups asociados
-                        const { data: followups } = await supabase.from('followups').select('*');
+                        const { data: followups } = await client.from('followups').select('*');
                         const fMap = {};
                         (followups || []).forEach(f => {
                             if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
@@ -41,11 +49,12 @@ const db = {
             return await localDb.events.toArray();
         },
         async get(id) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+                    const { data, error } = await client.from('events').select('*').eq('id', id).single();
                     if (!error && data) {
-                        const { data: followups } = await supabase.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                        const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
                         return { ...data, followups: followups || [] };
                     }
                 } catch (e) {
@@ -55,10 +64,11 @@ const db = {
             return await localDb.events.get(id);
         },
         async add(eventData) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
                     const { followups, ...cleanEvent } = eventData;
-                    const { data, error } = await supabase.from('events').insert([cleanEvent]).select().single();
+                    const { data, error } = await client.from('events').insert([cleanEvent]).select().single();
                     if (!error && data) return data.id;
                 } catch (e) {
                     console.warn("Supabase add failed", e);
@@ -67,11 +77,12 @@ const db = {
             return await localDb.events.add(eventData);
         },
         async update(id, updates) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
                     const { followups, id: _id, ...cleanUpdates } = updates;
                     cleanUpdates.updated_at = new Date().toISOString();
-                    await supabase.from('events').update(cleanUpdates).eq('id', id);
+                    await client.from('events').update(cleanUpdates).eq('id', id);
                 } catch (e) {
                     console.warn("Supabase update failed", e);
                 }
@@ -79,13 +90,14 @@ const db = {
             return await localDb.events.update(id, updates);
         },
         async delete(id) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
                     const event = await this.get(id);
                     if (event && event.numero_evento) {
-                        await supabase.from('followups').delete().eq('numero_evento', event.numero_evento);
+                        await client.from('followups').delete().eq('numero_evento', event.numero_evento);
                     }
-                    await supabase.from('events').delete().eq('id', id);
+                    await client.from('events').delete().eq('id', id);
                 } catch (e) {
                     console.warn("Supabase delete failed", e);
                 }
@@ -93,10 +105,11 @@ const db = {
             return await localDb.events.delete(id);
         },
         async clear() {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    await supabase.from('followups').delete().neq('id', 0);
-                    await supabase.from('events').delete().neq('id', 0);
+                    await client.from('followups').delete().neq('id', 0);
+                    await client.from('events').delete().neq('id', 0);
                 } catch (e) {
                     console.warn("Supabase clear failed", e);
                 }
@@ -104,9 +117,10 @@ const db = {
             return await localDb.events.clear();
         },
         async count() {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { count, error } = await supabase.from('events').select('*', { count: 'exact', head: true });
+                    const { count, error } = await client.from('events').select('*', { count: 'exact', head: true });
                     if (!error && typeof count === 'number') return count;
                 } catch (e) {
                     console.warn("Supabase count failed", e);
@@ -118,11 +132,12 @@ const db = {
             return {
                 equals: (val) => ({
                     first: async () => {
-                        if (supabase) {
+                        const client = getSupabaseClient();
+                        if (client) {
                             try {
-                                const { data, error } = await supabase.from('events').select('*').eq(field, val).maybeSingle();
+                                const { data, error } = await client.from('events').select('*').eq(field, val).maybeSingle();
                                 if (!error && data) {
-                                    const { data: followups } = await supabase.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                                    const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
                                     return { ...data, followups: followups || [] };
                                 }
                             } catch (e) {
@@ -137,9 +152,10 @@ const db = {
     },
     users: {
         async toArray() {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { data, error } = await supabase.from('users').select('*').order('username');
+                    const { data, error } = await client.from('users').select('*').order('username');
                     if (!error && data) return data;
                 } catch (e) {
                     console.warn("Supabase users fetch failed", e);
@@ -148,9 +164,10 @@ const db = {
             return await localDb.users.toArray();
         },
         async get(username) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
+                    const { data, error } = await client.from('users').select('*').eq('username', username).maybeSingle();
                     if (!error && data) return data;
                 } catch (e) {
                     console.warn("Supabase user get failed", e);
@@ -159,9 +176,10 @@ const db = {
             return await localDb.users.get(username);
         },
         async put(userObj) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    await supabase.from('users').upsert([userObj], { onConflict: 'username' });
+                    await client.from('users').upsert([userObj], { onConflict: 'username' });
                 } catch (e) {
                     console.warn("Supabase user put failed", e);
                 }
@@ -169,9 +187,10 @@ const db = {
             return await localDb.users.put(userObj);
         },
         async delete(username) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    await supabase.from('users').delete().eq('username', username);
+                    await client.from('users').delete().eq('username', username);
                 } catch (e) {
                     console.warn("Supabase user delete failed", e);
                 }
@@ -182,9 +201,10 @@ const db = {
             return {
                 equals: (val) => ({
                     toArray: async () => {
-                        if (supabase) {
+                        const client = getSupabaseClient();
+                        if (client) {
                             try {
-                                const { data, error } = await supabase.from('users').select('*').eq(field, val).order('username');
+                                const { data, error } = await client.from('users').select('*').eq(field, val).order('username');
                                 if (!error && data) return data;
                             } catch (e) {
                                 console.warn("Supabase users where failed", e);
@@ -198,9 +218,10 @@ const db = {
     },
     followups: {
         async add(followupObj) {
-            if (supabase) {
+            const client = getSupabaseClient();
+            if (client) {
                 try {
-                    const { data, error } = await supabase.from('followups').insert([followupObj]).select().single();
+                    const { data, error } = await client.from('followups').insert([followupObj]).select().single();
                     if (!error && data) return data.id;
                 } catch (e) {
                     console.warn("Supabase followup add failed", e);
