@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Vanilla CSS Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=46">
+    <link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
     <!-- App Container -->
@@ -19,18 +19,31 @@
         <aside class="sidebar">
             <div class="brand">
                 <div class="sidebar-logo-container">
-                    <svg viewBox="0 0 200 60" width="165" height="46" xmlns="http://www.w3.org/2000/svg" class="intecap-sidebar-svg">
+                    <svg viewBox="0 0 240 70" width="180" height="52" xmlns="http://www.w3.org/2000/svg" class="intecap-sidebar-svg">
                         <defs>
                             <linearGradient id="intecapSidebarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#008A4B" />
                                 <stop offset="100%" stop-color="#006838" />
                             </linearGradient>
+                            <linearGradient id="goldSidebarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#FBBF24" />
+                                <stop offset="100%" stop-color="#F59E0B" />
+                            </linearGradient>
                         </defs>
-                        <!-- Institutional Logo Symbol -->
-                        <rect x="5" y="10" width="40" height="40" rx="10" fill="url(#intecapSidebarGrad)" />
-                        <path d="M15 30 L23 38 L35 22" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                        <!-- Brand Text -->
-                        <text x="56" y="38" font-family="'Lexend', sans-serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="1">INTECAP</text>
+                        <!-- Gear / Technical Symbol -->
+                        <g transform="translate(10, 8)">
+                            <circle cx="27" cy="27" r="24" fill="url(#intecapSidebarGrad)" />
+                            <!-- Gear teeth -->
+                            <path d="M25 0 L29 0 L29 6 L25 6 Z M25 48 L29 48 L29 54 L25 54 Z M0 25 L6 25 L6 29 L0 29 Z M48 25 L54 25 L54 29 L48 29 Z M7 7 L11 11 L9 13 L5 9 Z M43 43 L47 47 L45 49 L41 45 Z M7 47 L11 43 L13 45 L9 49 Z M43 11 L47 7 L49 9 L45 13 Z" fill="#003851" opacity="0.4"/>
+                            <!-- Open Book & Torch of Knowledge -->
+                            <path d="M15 36 C20 32 27 34 27 34 C27 34 34 32 39 36 L39 23 C34 19 27 21 27 21 C27 21 20 19 15 23 Z" fill="#FFFFFF" />
+                            <path d="M27 21 L27 34" stroke="url(#intecapSidebarGrad)" stroke-width="2" stroke-linecap="round"/>
+                            <!-- Flame / Torch -->
+                            <path d="M27 12 C29 15 31 17 29 20 C28 21 26 21 25 20 C23 17 25 15 27 12 Z" fill="url(#goldSidebarGrad)" />
+                        </g>
+                        <!-- Text typography INTECAP -->
+                        <text x="74" y="42" font-family="'Lexend', sans-serif" font-weight="900" font-size="30" fill="#FFFFFF" letter-spacing="1.5">INTECAP</text>
+                        <text x="76" y="58" font-family="'Inter', sans-serif" font-weight="700" font-size="9" fill="#34D399" letter-spacing="2">GUATEMALA</text>
                     </svg>
                 </div>
                 <span class="sidebar-brand-subtitle">Servicios Empresariales Occidente</span>
@@ -598,18 +611,31 @@
         <div class="login-box">
             <div class="login-brand">
                 <div class="login-logo-container">
-                    <svg viewBox="0 0 200 60" width="180" height="54" xmlns="http://www.w3.org/2000/svg" class="intecap-svg-logo">
+                    <svg viewBox="0 0 240 70" width="220" height="64" xmlns="http://www.w3.org/2000/svg" class="intecap-svg-logo">
                         <defs>
                             <linearGradient id="intecapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                 <stop offset="0%" stop-color="#008A4B" />
-                                <stop offset="100%" stop-color="#005A32" />
+                                <stop offset="100%" stop-color="#006336" />
+                            </linearGradient>
+                            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#F59E0B" />
+                                <stop offset="100%" stop-color="#D97706" />
                             </linearGradient>
                         </defs>
-                        <!-- Institutional Logo Symbol -->
-                        <rect x="5" y="10" width="40" height="40" rx="10" fill="url(#intecapGrad)" />
-                        <path d="M15 30 L23 38 L35 22" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-                        <!-- Brand Text -->
-                        <text x="56" y="38" font-family="'Lexend', sans-serif" font-weight="900" font-size="28" fill="var(--text-main)" letter-spacing="1">INTECAP</text>
+                        <!-- Gear / Technical Symbol -->
+                        <g transform="translate(10, 8)">
+                            <circle cx="27" cy="27" r="24" fill="url(#intecapGrad)" />
+                            <!-- Gear teeth -->
+                            <path d="M25 0 L29 0 L29 6 L25 6 Z M25 48 L29 48 L29 54 L25 54 Z M0 25 L6 25 L6 29 L0 29 Z M48 25 L54 25 L54 29 L48 29 Z M7 7 L11 11 L9 13 L5 9 Z M43 43 L47 47 L45 49 L41 45 Z M7 47 L11 43 L13 45 L9 49 Z M43 11 L47 7 L49 9 L45 13 Z" fill="#006336" opacity="0.3"/>
+                            <!-- Open Book & Torch of Knowledge -->
+                            <path d="M15 36 C20 32 27 34 27 34 C27 34 34 32 39 36 L39 23 C34 19 27 21 27 21 C27 21 20 19 15 23 Z" fill="#FFFFFF" />
+                            <path d="M27 21 L27 34" stroke="url(#intecapGrad)" stroke-width="2" stroke-linecap="round"/>
+                            <!-- Flame / Torch -->
+                            <path d="M27 12 C29 15 31 17 29 20 C28 21 26 21 25 20 C23 17 25 15 27 12 Z" fill="url(#goldGrad)" />
+                        </g>
+                        <!-- Text typography INTECAP -->
+                        <text x="74" y="42" font-family="'Lexend', sans-serif" font-weight="900" font-size="30" fill="#003851" letter-spacing="1.5">INTECAP</text>
+                        <text x="76" y="58" font-family="'Inter', sans-serif" font-weight="700" font-size="9" fill="#008A4B" letter-spacing="2">GUATEMALA</text>
                     </svg>
                 </div>
                 <p class="brand-subtitle">Servicios Empresariales • Región Occidente</p>
@@ -678,6 +704,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=46"></script>
+    <script src="app.js?v=47"></script>
 </body>
 </html>
