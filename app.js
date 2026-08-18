@@ -2115,8 +2115,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await updateDatabaseStatusText();
     
-    // 13.1 SINCRONIZACIÓN ASÍNCRONA EN SEGUNDO PLANO (NON-BLOCKING BACKGROUND SYNC)
-    setTimeout(async () => {
+    // Sincronización inmediata de usuarios y eventos desde la nube
+    (async () => {
         try {
             await CloudSync.syncUsersFromCloud();
             await populateLoginConsultantsList();
@@ -2127,9 +2127,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (activeTab === 'usuarios') renderUsersTable();
             if (activeTab === 'reportes') renderReportView();
         } catch(e) {
-            console.warn("Background cloud sync finished with note:", e);
+            console.warn("Background cloud sync note:", e);
         }
-    }, 1000);
+    })();
     
     // Subview Tab listeners for event table subviews
     document.querySelectorAll('.subview-tab').forEach(tab => {
