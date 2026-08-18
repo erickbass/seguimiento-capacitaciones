@@ -244,6 +244,7 @@ let charts = {}; // Store Chart.js instances
 let currentRole = 'admin'; // 'admin' or 'consultor'
 let currentUserName = 'Administrador';
 let currentSubview = 'sin-participantes'; // default subview is now 'sin-participantes' (events with 0 participants)
+let currentReportSubview = 'sin-participantes'; // default report subview: prioridad a eventos sin participantes
 
 // DOM Elements
 const dropZone = document.getElementById('drop-zone');
@@ -1861,6 +1862,16 @@ async function renderReportView() {
                 return;
             }
             
+            const totalInscr = Number(e.total_inscritos || 0);
+            
+            // Filtrar según la pestaña activa de la bitácora:
+            if (currentReportSubview === 'sin-participantes' && totalInscr > 0) {
+                return; // Solo eventos prioritarios con 0 inscritos
+            }
+            if (currentReportSubview === 'con-participantes' && totalInscr === 0) {
+                return; // Solo eventos ya resueltos con inscritos
+            }
+            
             const followups = e.followups || [];
             followups.forEach(f => {
                 reportRows.push({
@@ -1874,6 +1885,7 @@ async function renderReportView() {
                     contraparte: e.contraparte,
                     consultor: e.consultor,
                     instructor: e.instructor,
+                    total_inscritos: totalInscr,
                     activo: e.activo !== false
                 });
             });
@@ -2046,6 +2058,11 @@ async function exportReportToExcel() {
             if (currentRole === 'consultor' && e.consultor !== currentUserName) {
                 return;
             }
+            
+            const totalInscr = Number(e.total_inscritos || 0);
+            if (currentReportSubview === 'sin-participantes' && totalInscr > 0) return;
+            if (currentReportSubview === 'con-participantes' && totalInscr === 0) return;
+            
             const followups = e.followups || [];
             followups.forEach(f => {
                 reportRows.push({
@@ -2058,6 +2075,7 @@ async function exportReportToExcel() {
                     contraparte: e.contraparte,
                     consultor: e.consultor,
                     instructor: e.instructor,
+                    total_inscritos: totalInscr,
                     activo: e.activo !== false
                 });
             });
@@ -2183,6 +2201,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.currentTarget.classList.add('active');
             currentSubview = e.currentTarget.getAttribute('data-subview');
             renderEventsTable();
+        });
+    });
+    
+    // Report Subview Tab listeners (Prioridad Sin Participantes vs Con Participantes)
+    document.querySelectorAll('.subview-tab-report').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.subview-tab-report').forEach(t => t.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            currentReportSubview = e.currentTarget.getAttribute('data-report-subview');
+            renderReportView();
         });
     });
     

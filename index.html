@@ -302,6 +302,22 @@
                         </div>
                     </div>
                     
+                    <!-- Pestañas de Estado de Participantes en Bitácora -->
+                    <div class="subviews-container" style="margin-bottom: 16px;">
+                        <button type="button" class="subview-tab-report active" data-report-subview="sin-participantes">
+                            <i data-lucide="alert-triangle" style="color: var(--color-danger);"></i>
+                            <span>Prioridad: Eventos Sin Participantes (0 Inscritos)</span>
+                        </button>
+                        <button type="button" class="subview-tab-report" data-report-subview="con-participantes">
+                            <i data-lucide="check-circle" style="color: var(--color-success);"></i>
+                            <span>Resueltos: Eventos Con Participantes Asignados</span>
+                        </button>
+                        <button type="button" class="subview-tab-report" data-report-subview="todos">
+                            <i data-lucide="list"></i>
+                            <span>Ver Todos</span>
+                        </button>
+                    </div>
+                    
                     <!-- Tabla del Reporte -->
                     <div class="table-responsive">
                         <table class="data-table" id="report-table">
@@ -652,6 +668,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=108"></script>
+    <script src="app.js?v=109"></script>
 </body>
 </html>
