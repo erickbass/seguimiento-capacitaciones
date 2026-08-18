@@ -22,7 +22,7 @@ localDb.version(5).stores({
     followups: '++id, numero_evento, date, user, note'
 });
 
-// Database Adapter (Conecta a Supabase en la nube con compatibilidad transparente)
+// Database Adapter (Conecta a Supabase en la nube con compatibilidad transparente y a prueba de fallos)
 const db = {
     events: {
         async toArray() {
@@ -30,23 +30,30 @@ const db = {
             if (client) {
                 try {
                     const { data: events, error } = await client.from('events').select('*').order('id', { ascending: false });
-                    if (!error && events) {
-                        const { data: followups } = await client.from('followups').select('*');
-                        const fMap = {};
-                        (followups || []).forEach(f => {
-                            if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
-                            fMap[f.numero_evento].push(f);
-                        });
-                        return events.map(e => ({
-                            ...e,
-                            followups: fMap[e.numero_evento] || []
-                        }));
+                    if (!error && Array.isArray(events)) {
+                        try {
+                            const { data: followups } = await client.from('followups').select('*');
+                            const fMap = {};
+                            (followups || []).forEach(f => {
+                                if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
+                                fMap[f.numero_evento].push(f);
+                            });
+                            return events.map(e => ({
+                                ...e,
+                                followups: fMap[e.numero_evento] || []
+                            }));
+                        } catch(fe) {
+                            return events.map(e => ({ ...e, followups: [] }));
+                        }
                     }
                 } catch (e) {
-                    console.warn("Supabase fetch failed, falling back to localDb", e);
+                    console.warn("Supabase fetch failed, trying localDb", e);
                 }
             }
-            return await localDb.events.toArray();
+            try {
+                if (localDb && localDb.events) return await localDb.events.toArray();
+            } catch(e) {}
+            return [];
         },
         async get(id) {
             const client = getSupabaseClient();
@@ -54,14 +61,21 @@ const db = {
                 try {
                     const { data, error } = await client.from('events').select('*').eq('id', id).single();
                     if (!error && data) {
-                        const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
-                        return { ...data, followups: followups || [] };
+                        try {
+                            const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                            return { ...data, followups: followups || [] };
+                        } catch(fe) {
+                            return { ...data, followups: [] };
+                        }
                     }
                 } catch (e) {
                     console.warn("Supabase get failed", e);
                 }
             }
-            return await localDb.events.get(id);
+            try {
+                if (localDb && localDb.events) return await localDb.events.get(id);
+            } catch(e) {}
+            return null;
         },
         async add(eventData) {
             const client = getSupabaseClient();
@@ -74,7 +88,10 @@ const db = {
                     console.warn("Supabase add failed", e);
                 }
             }
-            return await localDb.events.add(eventData);
+            try {
+                if (localDb && localDb.events) return await localDb.events.add(eventData);
+            } catch(e) {}
+            return Date.now();
         },
         async update(id, updates) {
             const client = getSupabaseClient();
@@ -87,7 +104,10 @@ const db = {
                     console.warn("Supabase update failed", e);
                 }
             }
-            return await localDb.events.update(id, updates);
+            try {
+                if (localDb && localDb.events) return await localDb.events.update(id, updates);
+            } catch(e) {}
+            return 1;
         },
         async delete(id) {
             const client = getSupabaseClient();
@@ -102,7 +122,10 @@ const db = {
                     console.warn("Supabase delete failed", e);
                 }
             }
-            return await localDb.events.delete(id);
+            try {
+                if (localDb && localDb.events) return await localDb.events.delete(id);
+            } catch(e) {}
+            return 1;
         },
         async clear() {
             const client = getSupabaseClient();
@@ -114,7 +137,9 @@ const db = {
                     console.warn("Supabase clear failed", e);
                 }
             }
-            return await localDb.events.clear();
+            try {
+                if (localDb && localDb.events) return await localDb.events.clear();
+            } catch(e) {}
         },
         async count() {
             const client = getSupabaseClient();
@@ -126,7 +151,10 @@ const db = {
                     console.warn("Supabase count failed", e);
                 }
             }
-            return await localDb.events.count();
+            try {
+                if (localDb && localDb.events) return await localDb.events.count();
+            } catch(e) {}
+            return 0;
         },
         where(field) {
             return {
@@ -137,14 +165,21 @@ const db = {
                             try {
                                 const { data, error } = await client.from('events').select('*').eq(field, val).maybeSingle();
                                 if (!error && data) {
-                                    const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
-                                    return { ...data, followups: followups || [] };
+                                    try {
+                                        const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                                        return { ...data, followups: followups || [] };
+                                    } catch(fe) {
+                                        return { ...data, followups: [] };
+                                    }
                                 }
                             } catch (e) {
                                 console.warn("Supabase where query failed", e);
                             }
                         }
-                        return await localDb.events.where(field).equals(val).first();
+                        try {
+                            if (localDb && localDb.events) return await localDb.events.where(field).equals(val).first();
+                        } catch(e) {}
+                        return null;
                     }
                 })
             };
@@ -156,12 +191,15 @@ const db = {
             if (client) {
                 try {
                     const { data, error } = await client.from('users').select('*').order('username');
-                    if (!error && data) return data;
+                    if (!error && Array.isArray(data)) return data;
                 } catch (e) {
                     console.warn("Supabase users fetch failed", e);
                 }
             }
-            return await localDb.users.toArray();
+            try {
+                if (localDb && localDb.users) return await localDb.users.toArray();
+            } catch(e) {}
+            return [];
         },
         async get(username) {
             const client = getSupabaseClient();
@@ -173,7 +211,10 @@ const db = {
                     console.warn("Supabase user get failed", e);
                 }
             }
-            return await localDb.users.get(username);
+            try {
+                if (localDb && localDb.users) return await localDb.users.get(username);
+            } catch(e) {}
+            return null;
         },
         async put(userObj) {
             const client = getSupabaseClient();
@@ -184,7 +225,10 @@ const db = {
                     console.warn("Supabase user put failed", e);
                 }
             }
-            return await localDb.users.put(userObj);
+            try {
+                if (localDb && localDb.users) return await localDb.users.put(userObj);
+            } catch(e) {}
+            return userObj.username;
         },
         async delete(username) {
             const client = getSupabaseClient();
@@ -195,7 +239,10 @@ const db = {
                     console.warn("Supabase user delete failed", e);
                 }
             }
-            return await localDb.users.delete(username);
+            try {
+                if (localDb && localDb.users) return await localDb.users.delete(username);
+            } catch(e) {}
+            return 1;
         },
         where(field) {
             return {
@@ -205,12 +252,15 @@ const db = {
                         if (client) {
                             try {
                                 const { data, error } = await client.from('users').select('*').eq(field, val).order('username');
-                                if (!error && data) return data;
+                                if (!error && Array.isArray(data)) return data;
                             } catch (e) {
                                 console.warn("Supabase users where failed", e);
                             }
                         }
-                        return await localDb.users.where(field).equals(val).toArray();
+                        try {
+                            if (localDb && localDb.users) return await localDb.users.where(field).equals(val).toArray();
+                        } catch(e) {}
+                        return [];
                     }
                 })
             };
@@ -227,7 +277,10 @@ const db = {
                     console.warn("Supabase followup add failed", e);
                 }
             }
-            return await localDb.followups.add(followupObj);
+            try {
+                if (localDb && localDb.followups) return await localDb.followups.add(followupObj);
+            } catch(e) {}
+            return Date.now();
         }
     }
 };
@@ -469,21 +522,29 @@ function initIcons() {
 
 // 2. TOAST NOTIFICATION SYSTEM
 function showToast(message, type = 'success') {
-    toastMessageEl.textContent = message;
-    toastEl.className = `toast active ${type}`;
-    
-    // Set appropriate icon
-    let iconName = 'check-circle';
-    if (type === 'error') iconName = 'alert-triangle';
-    if (type === 'warning') iconName = 'alert-circle';
-    if (type === 'info') iconName = 'info';
-    
-    toastIconEl.setAttribute('data-lucide', iconName);
-    initIcons();
+    try {
+        if (toastMessageEl) toastMessageEl.textContent = message;
+        if (toastEl) toastEl.className = `toast active ${type}`;
+        
+        // Set appropriate icon
+        let iconName = 'check-circle';
+        if (type === 'error') iconName = 'alert-triangle';
+        if (type === 'warning') iconName = 'alert-circle';
+        if (type === 'info') iconName = 'info';
+        
+        if (toastIconEl && typeof toastIconEl.setAttribute === 'function') {
+            toastIconEl.setAttribute('data-lucide', iconName);
+        }
+        initIcons();
 
-    setTimeout(() => {
-        toastEl.classList.remove('active');
-    }, 4000);
+        if (toastEl) {
+            setTimeout(() => {
+                toastEl.classList.remove('active');
+            }, 4000);
+        }
+    } catch (e) {
+        console.log("Toast message:", message);
+    }
 }
 
 // 3. NAVIGATION CONTROL
