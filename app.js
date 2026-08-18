@@ -136,19 +136,54 @@ const CloudSync = {
         }
     },
     
-    // Subir evento o actualización a la nube
-    async pushEventToCloud(eventObj) {
+    // Subir lotes de eventos a la nube
+    async pushEventsBatch(eventsList) {
         const client = getSupabase();
-        if (!client) return;
+        if (!client || !Array.isArray(eventsList) || eventsList.length === 0) return;
+        
         try {
-            const { followups, id, ...cleanEvent } = eventObj;
-            cleanEvent.updated_at = new Date().toISOString();
+            // Limpiar campos que no están en el schema de Supabase
+            const cleanRows = eventsList.map(e => ({
+                numero_evento: String(e.numero_evento || '').trim(),
+                nombre_evento: String(e.nombre_evento || '').trim(),
+                nombre_producto: String(e.nombre_producto || '').trim(),
+                contraparte: String(e.contraparte || '').trim(),
+                consultor: String(e.consultor || '').trim(),
+                instructor: String(e.instructor || '').trim(),
+                fecha_inicio: String(e.fecha_inicio || '').trim(),
+                fecha_fin: String(e.fecha_fin || '').trim(),
+                hombres_inscritos: Number(e.hombres_inscritos || 0),
+                mujeres_inscritas: Number(e.mujeres_inscritas || 0),
+                total_inscritos: Number(e.total_inscritos || 0),
+                estado_evento: String(e.estado_evento || 'No inscrito').trim(),
+                activo: e.activo !== false,
+                updated_at: new Date().toISOString()
+            })).filter(e => e.numero_evento !== '');
             
-            await client.from('events').upsert([cleanEvent], { onConflict: 'numero_evento' });
-            
-            // Subir seguimientos asociados
-            if (Array.isArray(followups) && followups.length > 0) {
-                for (const f of followups) {
+            // Subir en bloques de 100 para evitar límites de payload
+            const chunkSize = 100;
+            for (let i = 0; i < cleanRows.length; i += chunkSize) {
+                const chunk = cleanRows.slice(i, i + chunkSize);
+                const { error } = await client.from('events').upsert(chunk, { onConflict: 'numero_evento' });
+                if (error) {
+                    console.error("Error subiendo lote de eventos a Supabase:", error);
+                }
+            }
+            console.log(`Sincronizados exitosamente ${cleanRows.length} eventos hacia Supabase.`);
+        } catch(e) {
+            console.warn("Error en pushEventsBatch:", e);
+        }
+    },
+    
+    // Subir un evento individual
+    async pushEventToCloud(eventObj) {
+        if (!eventObj) return;
+        await this.pushEventsBatch([eventObj]);
+        
+        const client = getSupabase();
+        if (client && Array.isArray(eventObj.followups) && eventObj.followups.length > 0) {
+            try {
+                for (const f of eventObj.followups) {
                     await client.from('followups').upsert([{
                         numero_evento: eventObj.numero_evento,
                         date: f.date,
@@ -157,10 +192,9 @@ const CloudSync = {
                         evidence: f.evidence || null
                     }]);
                 }
+            } catch(e) {
+                console.warn("Error subiendo seguimientos:", e);
             }
-            console.log("Evento sincronizado hacia la nube:", eventObj.numero_evento);
-        } catch(e) {
-            console.warn("Error en pushEventToCloud:", e);
         }
     }
 };
@@ -735,9 +769,8 @@ function processUploadedFile(file) {
                 setTimeout(async () => {
                     try {
                         const allEv = await db.events.toArray();
-                        for (const ev of allEv) {
-                            await CloudSync.pushEventToCloud(ev);
-                        }
+                        await CloudSync.pushEventsBatch(allEv);
+                        
                         const allUs = await db.users.toArray();
                         for (const us of allUs) {
                             await CloudSync.pushUserToCloud(us);
