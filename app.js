@@ -1,28 +1,215 @@
-// Intecap Capacita Tracker - Application Logic
-// Uses Dexie.js for IndexedDB, SheetJS for Excel parsing, and Chart.js for visualization
+// 1. SUPABASE CLOUD DATABASE INITIALIZATION
+const SUPABASE_URL = 'https://pivngvqanpdwdqklpucw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8VIqmFG84Vvg2-eeIgpDsg_6s7tAJjP';
 
-// 1. DATABASE INITIALIZATION
-const db = new Dexie('intecap_capacita_db');
-db.version(1).stores({
-    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin',
-    participants: '++id, evento_id, nombre, estado'
-});
-db.version(2).stores({
-    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento',
-    participants: null
-});
-db.version(3).stores({
-    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento',
-    users: 'username, role, password'
-});
-db.version(4).stores({
+const supabase = (window.supabase && window.supabase.createClient) 
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+// IndexedDB Fallback / Local Cache
+const localDb = new Dexie('intecap_capacita_db');
+localDb.version(5).stores({
     events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
-    users: 'username, role, password'
+    users: 'username, role, password',
+    followups: '++id, numero_evento, date, user, note'
 });
-db.version(5).stores({
-    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
-    users: 'username, role, password'
-});
+
+// Database Adapter (Conecta a Supabase en la nube con compatibilidad transparente)
+const db = {
+    events: {
+        async toArray() {
+            if (supabase) {
+                try {
+                    const { data: events, error } = await supabase.from('events').select('*').order('id', { ascending: false });
+                    if (!error && events) {
+                        // También obtener los followups asociados
+                        const { data: followups } = await supabase.from('followups').select('*');
+                        const fMap = {};
+                        (followups || []).forEach(f => {
+                            if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
+                            fMap[f.numero_evento].push(f);
+                        });
+                        return events.map(e => ({
+                            ...e,
+                            followups: fMap[e.numero_evento] || []
+                        }));
+                    }
+                } catch (e) {
+                    console.warn("Supabase fetch failed, falling back to localDb", e);
+                }
+            }
+            return await localDb.events.toArray();
+        },
+        async get(id) {
+            if (supabase) {
+                try {
+                    const { data, error } = await supabase.from('events').select('*').eq('id', id).single();
+                    if (!error && data) {
+                        const { data: followups } = await supabase.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                        return { ...data, followups: followups || [] };
+                    }
+                } catch (e) {
+                    console.warn("Supabase get failed", e);
+                }
+            }
+            return await localDb.events.get(id);
+        },
+        async add(eventData) {
+            if (supabase) {
+                try {
+                    const { followups, ...cleanEvent } = eventData;
+                    const { data, error } = await supabase.from('events').insert([cleanEvent]).select().single();
+                    if (!error && data) return data.id;
+                } catch (e) {
+                    console.warn("Supabase add failed", e);
+                }
+            }
+            return await localDb.events.add(eventData);
+        },
+        async update(id, updates) {
+            if (supabase) {
+                try {
+                    const { followups, id: _id, ...cleanUpdates } = updates;
+                    cleanUpdates.updated_at = new Date().toISOString();
+                    await supabase.from('events').update(cleanUpdates).eq('id', id);
+                } catch (e) {
+                    console.warn("Supabase update failed", e);
+                }
+            }
+            return await localDb.events.update(id, updates);
+        },
+        async delete(id) {
+            if (supabase) {
+                try {
+                    const event = await this.get(id);
+                    if (event && event.numero_evento) {
+                        await supabase.from('followups').delete().eq('numero_evento', event.numero_evento);
+                    }
+                    await supabase.from('events').delete().eq('id', id);
+                } catch (e) {
+                    console.warn("Supabase delete failed", e);
+                }
+            }
+            return await localDb.events.delete(id);
+        },
+        async clear() {
+            if (supabase) {
+                try {
+                    await supabase.from('followups').delete().neq('id', 0);
+                    await supabase.from('events').delete().neq('id', 0);
+                } catch (e) {
+                    console.warn("Supabase clear failed", e);
+                }
+            }
+            return await localDb.events.clear();
+        },
+        async count() {
+            if (supabase) {
+                try {
+                    const { count, error } = await supabase.from('events').select('*', { count: 'exact', head: true });
+                    if (!error && typeof count === 'number') return count;
+                } catch (e) {
+                    console.warn("Supabase count failed", e);
+                }
+            }
+            return await localDb.events.count();
+        },
+        where(field) {
+            return {
+                equals: (val) => ({
+                    first: async () => {
+                        if (supabase) {
+                            try {
+                                const { data, error } = await supabase.from('events').select('*').eq(field, val).maybeSingle();
+                                if (!error && data) {
+                                    const { data: followups } = await supabase.from('followups').select('*').eq('numero_evento', data.numero_evento);
+                                    return { ...data, followups: followups || [] };
+                                }
+                            } catch (e) {
+                                console.warn("Supabase where query failed", e);
+                            }
+                        }
+                        return await localDb.events.where(field).equals(val).first();
+                    }
+                })
+            };
+        }
+    },
+    users: {
+        async toArray() {
+            if (supabase) {
+                try {
+                    const { data, error } = await supabase.from('users').select('*').order('username');
+                    if (!error && data) return data;
+                } catch (e) {
+                    console.warn("Supabase users fetch failed", e);
+                }
+            }
+            return await localDb.users.toArray();
+        },
+        async get(username) {
+            if (supabase) {
+                try {
+                    const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
+                    if (!error && data) return data;
+                } catch (e) {
+                    console.warn("Supabase user get failed", e);
+                }
+            }
+            return await localDb.users.get(username);
+        },
+        async put(userObj) {
+            if (supabase) {
+                try {
+                    await supabase.from('users').upsert([userObj], { onConflict: 'username' });
+                } catch (e) {
+                    console.warn("Supabase user put failed", e);
+                }
+            }
+            return await localDb.users.put(userObj);
+        },
+        async delete(username) {
+            if (supabase) {
+                try {
+                    await supabase.from('users').delete().eq('username', username);
+                } catch (e) {
+                    console.warn("Supabase user delete failed", e);
+                }
+            }
+            return await localDb.users.delete(username);
+        },
+        where(field) {
+            return {
+                equals: (val) => ({
+                    toArray: async () => {
+                        if (supabase) {
+                            try {
+                                const { data, error } = await supabase.from('users').select('*').eq(field, val).order('username');
+                                if (!error && data) return data;
+                            } catch (e) {
+                                console.warn("Supabase users where failed", e);
+                            }
+                        }
+                        return await localDb.users.where(field).equals(val).toArray();
+                    }
+                })
+            };
+        }
+    },
+    followups: {
+        async add(followupObj) {
+            if (supabase) {
+                try {
+                    const { data, error } = await supabase.from('followups').insert([followupObj]).select().single();
+                    if (!error && data) return data.id;
+                } catch (e) {
+                    console.warn("Supabase followup add failed", e);
+                }
+            }
+            return await localDb.followups.add(followupObj);
+        }
+    }
+};
 
 // Create indexes to speed up participant queries
 // Dexie supports multi-entry or compound indexes, but simple indexing is enough for our size.
@@ -1573,17 +1760,21 @@ document.getElementById('form-add-followup').addEventListener('submit', async (e
             return;
         }
         
-        event.followups = event.followups || [];
-        event.followups.push({
-            id: Date.now(),
+        const newFollowup = {
+            numero_evento: event.numero_evento,
             date: new Date().toISOString(),
             user: currentUserName,
             note: note,
             evidence: evidenceBase64
-        });
+        };
         
-        await db.events.put(event);
-        showToast("Seguimiento registrado con éxito.");
+        await db.followups.add(newFollowup);
+        
+        // Actualizar el array local del evento para renderizado inmediato
+        event.followups = event.followups || [];
+        event.followups.push(newFollowup);
+        
+        showToast("Seguimiento registrado con éxito en la nube.");
         
         // Reset form
         document.getElementById('form-add-followup').reset();
