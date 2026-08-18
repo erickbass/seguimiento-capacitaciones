@@ -656,6 +656,38 @@
     </div>
 
     <!-- Scripts -->
+    <script>
+        function handleManualLogin() {
+            try {
+                var selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
+                var role = selectedRoleEl ? selectedRoleEl.value : 'admin';
+                var name = 'Administrador';
+                if (role === 'supervisor') name = 'Supervisor';
+                if (role === 'consultor') {
+                    var sel = document.getElementById('login-consultor-select');
+                    name = (sel && sel.value) ? sel.value : 'Consultor';
+                }
+                
+                // Aplicar sesión de inmediato
+                localStorage.setItem('session_role', role);
+                localStorage.setItem('session_name', name);
+                
+                var loginScreen = document.getElementById('login-screen');
+                if (loginScreen) {
+                    loginScreen.classList.remove('active');
+                    loginScreen.style.setProperty('display', 'none', 'important');
+                }
+                
+                if (window.applySession) {
+                    window.applySession(role, name);
+                }
+            } catch(err) {
+                console.error("Error en login inline:", err);
+                var ls = document.getElementById('login-screen');
+                if (ls) ls.style.display = 'none';
+            }
+        }
+    </script>
     <!-- Libraries Loaded from CDN for seamless user execution without local package setup -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -665,6 +697,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=55"></script>
+    <script src="app.js?v=56"></script>
 </body>
 </html>
