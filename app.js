@@ -1,7 +1,23 @@
 // Intecap Capacita Tracker - Application Logic
-// Uses Dexie.js for IndexedDB, SheetJS for Excel parsing, and Chart.js for visualization
+// Uses Dexie.js for IndexedDB, SheetJS for Excel parsing, Chart.js for visualization, and Supabase for Cloud Background Sync
 
-// 1. DATABASE INITIALIZATION
+// 0. SUPABASE CLOUD SYNC CONFIGURATION
+const SUPABASE_URL = 'https://pivngvqanpdwdqklpucw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_8VIqmFG84Vvg2-eeIgpDsg_6s7tAJjP';
+
+let supabaseClient = null;
+function getSupabase() {
+    if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch(e) {
+            console.warn("Supabase init error:", e);
+        }
+    }
+    return supabaseClient;
+}
+
+// 1. DATABASE INITIALIZATION (DEXIE LOCAL - SIEMPRE RÁPIDO E INSTANTÁNEO)
 const db = new Dexie('intecap_capacita_db');
 db.version(1).stores({
     events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin',
@@ -23,6 +39,130 @@ db.version(5).stores({
     events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
     users: 'username, role, password'
 });
+
+// 1.2 MOTOR DE SINCRONIZACIÓN ASÍNCRONO CON LA NUBE (NON-BLOCKING CLOUD SYNC)
+const CloudSync = {
+    // Sincronizar usuarios desde la nube a la base de datos local
+    async syncUsersFromCloud() {
+        const client = getSupabase();
+        if (!client) return;
+        try {
+            const { data: cloudUsers, error } = await client.from('users').select('*');
+            if (!error && Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+                for (const u of cloudUsers) {
+                    await db.users.put({
+                        username: u.username,
+                        role: u.role,
+                        password: u.password
+                    });
+                }
+                console.log("Usuarios sincronizados desde la nube:", cloudUsers.length);
+            }
+        } catch(e) {
+            console.warn("Error en syncUsersFromCloud:", e);
+        }
+    },
+    
+    // Subir usuario modificado a la nube
+    async pushUserToCloud(userObj) {
+        const client = getSupabase();
+        if (!client) return;
+        try {
+            await client.from('users').upsert([{
+                username: userObj.username,
+                role: userObj.role,
+                password: userObj.password,
+                updated_at: new Date().toISOString()
+            }], { onConflict: 'username' });
+            console.log("Usuario sincronizado hacia la nube:", userObj.username);
+        } catch(e) {
+            console.warn("Error en pushUserToCloud:", e);
+        }
+    },
+    
+    // Sincronizar eventos desde la nube a local
+    async syncEventsFromCloud() {
+        const client = getSupabase();
+        if (!client) return;
+        try {
+            const { data: cloudEvents, error } = await client.from('events').select('*');
+            if (!error && Array.isArray(cloudEvents) && cloudEvents.length > 0) {
+                // Obtener seguimientos de la nube
+                const { data: cloudFollowups } = await client.from('followups').select('*');
+                const fMap = {};
+                (cloudFollowups || []).forEach(f => {
+                    if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
+                    fMap[f.numero_evento].push({
+                        id: f.id,
+                        date: f.date,
+                        user: f.user,
+                        note: f.note,
+                        evidence: f.evidence
+                    });
+                });
+                
+                for (const e of cloudEvents) {
+                    const localEvent = await db.events.where('numero_evento').equals(e.numero_evento).first();
+                    const followups = fMap[e.numero_evento] || [];
+                    
+                    const eventData = {
+                        numero_evento: e.numero_evento,
+                        nombre_evento: e.nombre_evento,
+                        producto: e.producto,
+                        contraparte: e.contraparte,
+                        consultor: e.consultor,
+                        instructor: e.instructor,
+                        fecha_inicio: e.fecha_inicio,
+                        fecha_fin: e.fecha_fin,
+                        hombres_inscritos: e.hombres_inscritos || 0,
+                        mujeres_inscritas: e.mujeres_inscritas || 0,
+                        total_inscritos: e.total_inscritos || 0,
+                        estado_evento: e.estado_evento,
+                        activo: e.activo !== false,
+                        followups: followups
+                    };
+                    
+                    if (localEvent) {
+                        await db.events.update(localEvent.id, eventData);
+                    } else {
+                        await db.events.add(eventData);
+                    }
+                }
+                console.log("Eventos sincronizados desde la nube:", cloudEvents.length);
+            }
+        } catch(e) {
+            console.warn("Error en syncEventsFromCloud:", e);
+        }
+    },
+    
+    // Subir evento o actualización a la nube
+    async pushEventToCloud(eventObj) {
+        const client = getSupabase();
+        if (!client) return;
+        try {
+            const { followups, id, ...cleanEvent } = eventObj;
+            cleanEvent.updated_at = new Date().toISOString();
+            
+            await client.from('events').upsert([cleanEvent], { onConflict: 'numero_evento' });
+            
+            // Subir seguimientos asociados
+            if (Array.isArray(followups) && followups.length > 0) {
+                for (const f of followups) {
+                    await client.from('followups').upsert([{
+                        numero_evento: eventObj.numero_evento,
+                        date: f.date,
+                        user: f.user,
+                        note: f.note,
+                        evidence: f.evidence || null
+                    }]);
+                }
+            }
+            console.log("Evento sincronizado hacia la nube:", eventObj.numero_evento);
+        } catch(e) {
+            console.warn("Error en pushEventToCloud:", e);
+        }
+    }
+};
 
 // Create indexes to speed up participant queries
 // Dexie supports multi-entry or compound indexes, but simple indexing is enough for our size.
@@ -589,6 +729,23 @@ function processUploadedFile(file) {
             
             if (insertedCount > 0 || updatedCount > 0) {
                 showToast(`¡Integración exitosa! Se añadieron ${insertedCount} eventos nuevos y se actualizaron ${updatedCount} existentes.`);
+                
+                // Sincronizar todos los eventos y usuarios recién importados hacia la nube en segundo plano
+                setTimeout(async () => {
+                    try {
+                        const allEv = await db.events.toArray();
+                        for (const ev of allEv) {
+                            await CloudSync.pushEventToCloud(ev);
+                        }
+                        const allUs = await db.users.toArray();
+                        for (const us of allUs) {
+                            await CloudSync.pushUserToCloud(us);
+                        }
+                        console.log("Datos importados sincronizados con la nube.");
+                    } catch(e) {
+                        console.warn("Error sincronizando importación a la nube:", e);
+                    }
+                }, 100);
             } else {
                 showToast("No se encontraron registros de eventos válidos para importar.", "warning");
             }
@@ -1431,7 +1588,11 @@ async function renderUsersTable() {
                     if (userRecord) {
                         userRecord.password = newPassword;
                         await db.users.put(userRecord);
-                        showToast(`Datos de ${username} actualizados con éxito.`);
+                        
+                        // Sincronizar hacia la nube en segundo plano
+                        CloudSync.pushUserToCloud(userRecord);
+                        
+                        showToast(`Contraseña de ${username} actualizada y sincronizada con éxito.`);
                     }
                 } catch (err) {
                     console.error(err);
@@ -1583,6 +1744,10 @@ document.getElementById('form-add-followup').addEventListener('submit', async (e
         });
         
         await db.events.put(event);
+        
+        // Sincronizar el evento y su nuevo seguimiento hacia la nube en segundo plano
+        CloudSync.pushEventToCloud(event);
+        
         showToast("Seguimiento registrado con éxito.");
         
         // Reset form
@@ -1915,6 +2080,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     await updateDatabaseStatusText();
+    
+    // 13.1 SINCRONIZACIÓN ASÍNCRONA EN SEGUNDO PLANO (NON-BLOCKING BACKGROUND SYNC)
+    setTimeout(async () => {
+        try {
+            await CloudSync.syncUsersFromCloud();
+            await CloudSync.syncEventsFromCloud();
+            await updateDatabaseStatusText();
+            if (activeTab === 'dashboard') renderDashboard();
+            if (activeTab === 'eventos') renderEventsTable();
+            if (activeTab === 'usuarios') renderUsersTable();
+            if (activeTab === 'reportes') renderReportView();
+        } catch(e) {
+            console.warn("Background cloud sync finished with note:", e);
+        }
+    }, 1000);
     
     // Subview Tab listeners for event table subviews
     document.querySelectorAll('.subview-tab').forEach(tab => {
