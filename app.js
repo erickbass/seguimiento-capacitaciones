@@ -783,15 +783,18 @@ function processUploadedFile(file) {
             }
             
             // Generar credenciales automáticas para nuevos consultores detectados
+            const newUsersList = [];
             for (const cName of consultoresSet) {
                 if (cName.trim() !== '') {
                     const exists = await db.users.get(cName);
                     if (!exists) {
-                        await db.users.put({
+                        const userObj = {
                             username: cName,
                             role: 'consultor',
                             password: '123'
-                        });
+                        };
+                        await db.users.put(userObj);
+                        newUsersList.push(userObj);
                     }
                 }
             }
@@ -799,21 +802,28 @@ function processUploadedFile(file) {
             if (insertedCount > 0 || updatedCount > 0) {
                 showToast(`¡Integración exitosa! Se añadieron ${insertedCount} eventos nuevos y se actualizaron ${updatedCount} existentes.`);
                 
-                // Sincronizar todos los eventos y usuarios recién importados hacia la nube en segundo plano
-                setTimeout(async () => {
+                // 100% AUTOMÁTICO: Sincronizar todos los eventos y usuarios recién importados hacia la nube en segundo plano
+                (async () => {
                     try {
                         const allEv = await db.events.toArray();
                         await CloudSync.pushEventsBatch(allEv);
                         
                         const allUs = await db.users.toArray();
-                        for (const us of allUs) {
-                            await CloudSync.pushUserToCloud(us);
+                        const client = getSupabase();
+                        if (client && allUs.length > 0) {
+                            const cleanUsers = allUs.map(u => ({
+                                username: u.username,
+                                role: u.role,
+                                password: u.password,
+                                created_at: new Date().toISOString()
+                            }));
+                            await client.from('users').upsert(cleanUsers, { onConflict: 'username' });
                         }
-                        console.log("Datos importados sincronizados con la nube.");
+                        console.log("100% AUTOMÁTICO: Datos y consultores subidos exitosamente a Supabase.");
                     } catch(e) {
-                        console.warn("Error sincronizando importación a la nube:", e);
+                        console.warn("Error en sincronización automática post-importación:", e);
                     }
-                }, 100);
+                })();
             } else {
                 showToast("No se encontraron registros de eventos válidos para importar.", "warning");
             }
