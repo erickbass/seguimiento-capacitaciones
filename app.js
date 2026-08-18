@@ -379,11 +379,70 @@ async function populateLoginConsultantsList() {
     }
 }
 
+window.handleManualLogin = async function() {
+    const selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
+    const selectedRole = selectedRoleEl ? selectedRoleEl.value : 'admin';
+    const passwordInput = (document.getElementById('login-password-input').value || '').trim();
+    
+    if (selectedRole === 'admin') {
+        let isValid = (passwordInput.toLowerCase() === 'admin');
+        try {
+            const user = await db.users.get('Administrador');
+            if (user && user.password) {
+                isValid = (passwordInput === user.password || passwordInput.toLowerCase() === 'admin');
+            }
+        } catch(err) {}
+        
+        if (isValid) {
+            await applySession('admin', 'Administrador');
+            showToast("Bienvenido, Administrador");
+        } else {
+            showToast("Contraseña incorrecta para Administrador (usa: admin)", "error");
+        }
+    } else if (selectedRole === 'supervisor') {
+        let isValid = (passwordInput.toLowerCase() === 'supervisor');
+        try {
+            const user = await db.users.get('Supervisor');
+            if (user && user.password) {
+                isValid = (passwordInput === user.password || passwordInput.toLowerCase() === 'supervisor');
+            }
+        } catch(err) {}
+        
+        if (isValid) {
+            await applySession('supervisor', 'Supervisor');
+            showToast("Bienvenido, Supervisor");
+        } else {
+            showToast("Contraseña incorrecta para Supervisor (usa: supervisor)", "error");
+        }
+    } else {
+        const selectEl = document.getElementById('login-consultor-select');
+        const selectedConsultor = selectEl ? selectEl.value : '';
+        if (!selectedConsultor) {
+            showToast("Por favor selecciona tu nombre en la lista de consultores.", "warning");
+            return;
+        }
+        
+        let isValid = (passwordInput === '123');
+        try {
+            const user = await db.users.get(selectedConsultor);
+            if (user && user.password) {
+                isValid = (passwordInput === user.password || passwordInput === '123');
+            }
+        } catch(err) {}
+        
+        if (isValid) {
+            await applySession('consultor', selectedConsultor);
+            showToast(`Bienvenido, ${selectedConsultor}`);
+        } else {
+            showToast("Contraseña incorrecta para el consultor seleccionado (usa: 123)", "error");
+        }
+    }
+};
+
 function initLoginListeners() {
     const roleRadios = document.querySelectorAll('input[name="login-role"]');
     const consultorGroup = document.getElementById('login-consultor-group');
     const loginForm = document.getElementById('login-form');
-    const btnSubmit = document.getElementById('btn-login-submit');
     const logoutBtn = document.getElementById('btn-logout');
     
     roleRadios.forEach(radio => {
@@ -396,77 +455,11 @@ function initLoginListeners() {
         });
     });
     
-    async function doLoginProcess(e) {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        const selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
-        const selectedRole = selectedRoleEl ? selectedRoleEl.value : 'admin';
-        const passwordInput = (document.getElementById('login-password-input').value || '').trim();
-        
-        if (selectedRole === 'admin') {
-            let isValid = (passwordInput.toLowerCase() === 'admin');
-            try {
-                const user = await db.users.get('Administrador');
-                if (user && user.password) {
-                    isValid = (passwordInput === user.password || passwordInput.toLowerCase() === 'admin');
-                }
-            } catch(err) {}
-            
-            if (isValid) {
-                await applySession('admin', 'Administrador');
-                showToast("Bienvenido, Administrador");
-            } else {
-                showToast("Contraseña incorrecta para Administrador (usa: admin)", "error");
-            }
-        } else if (selectedRole === 'supervisor') {
-            let isValid = (passwordInput.toLowerCase() === 'supervisor');
-            try {
-                const user = await db.users.get('Supervisor');
-                if (user && user.password) {
-                    isValid = (passwordInput === user.password || passwordInput.toLowerCase() === 'supervisor');
-                }
-            } catch(err) {}
-            
-            if (isValid) {
-                await applySession('supervisor', 'Supervisor');
-                showToast("Bienvenido, Supervisor");
-            } else {
-                showToast("Contraseña incorrecta para Supervisor (usa: supervisor)", "error");
-            }
-        } else {
-            const selectEl = document.getElementById('login-consultor-select');
-            const selectedConsultor = selectEl ? selectEl.value : '';
-            if (!selectedConsultor) {
-                showToast("Por favor selecciona tu nombre en la lista de consultores.", "warning");
-                return;
-            }
-            
-            let isValid = (passwordInput === '123');
-            try {
-                const user = await db.users.get(selectedConsultor);
-                if (user && user.password) {
-                    isValid = (passwordInput === user.password || passwordInput === '123');
-                }
-            } catch(err) {}
-            
-            if (isValid) {
-                await applySession('consultor', selectedConsultor);
-                showToast(`Bienvenido, ${selectedConsultor}`);
-            } else {
-                showToast("Contraseña incorrecta para el consultor seleccionado (usa: 123)", "error");
-            }
-        }
-    }
-    
     if (loginForm) {
-        loginForm.onsubmit = doLoginProcess;
-        loginForm.addEventListener('submit', doLoginProcess);
-    }
-    if (btnSubmit) {
-        btnSubmit.onclick = doLoginProcess;
+        loginForm.onsubmit = function(e) {
+            e.preventDefault();
+            window.handleManualLogin();
+        };
     }
     
     if (logoutBtn) {
