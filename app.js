@@ -292,6 +292,7 @@ async function applySession(role, name) {
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
         loginScreen.classList.remove('active');
+        loginScreen.style.display = 'none';
     }
     
     // Redirigir si no es admin y está en pestaña no permitida
@@ -312,6 +313,7 @@ function logout() {
     
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
+        loginScreen.style.display = 'flex';
         loginScreen.classList.add('active');
     }
     
