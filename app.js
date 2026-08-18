@@ -432,7 +432,7 @@ async function populateLoginConsultantsList() {
     }
 }
 
-window.handleManualLogin = async function() {
+window.handleManualLoginApp = window.handleManualLogin = async function() {
     try {
         const selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
         const selectedRole = selectedRoleEl ? selectedRoleEl.value : 'admin';
@@ -593,7 +593,7 @@ function switchView(viewId) {
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.substring(1) || 'dashboard';
     // Validate hash
-    if (['dashboard', 'eventos', 'importar', 'usuarios'].includes(hash)) {
+    if (['dashboard', 'eventos', 'reportes', 'importar', 'usuarios'].includes(hash)) {
         switchView(hash);
     }
 });
