@@ -549,16 +549,22 @@ function showToast(message, type = 'success') {
 
 // 3. NAVIGATION CONTROL
 function switchView(viewId) {
-    views.forEach(view => {
+    const allViews = document.querySelectorAll('.content-view');
+    const allNavItems = document.querySelectorAll('.nav-item');
+    const titleEl = document.getElementById('page-title');
+    
+    allViews.forEach(view => {
         view.classList.remove('active');
+        view.style.display = 'none';
     });
     
     const targetView = document.getElementById(`view-${viewId}`);
     if (targetView) {
         targetView.classList.add('active');
+        targetView.style.display = 'block';
     }
 
-    navItems.forEach(item => {
+    allNavItems.forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('href') === `#${viewId}`) {
             item.classList.add('active');
@@ -573,7 +579,9 @@ function switchView(viewId) {
         'importar': 'Importar Archivo de Excel',
         'usuarios': 'Gestión de Usuarios y Accesos'
     };
-    pageTitleEl.textContent = titles[viewId] || 'Gestor de Capacitaciones';
+    if (titleEl) {
+        titleEl.textContent = titles[viewId] || 'Gestor de Capacitaciones';
+    }
     activeTab = viewId;
 
     if (viewId === 'dashboard') {
@@ -2227,7 +2235,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Set active navigation button state initially if user visits manual links
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
+        e.preventDefault();
         const hash = item.getAttribute('href').substring(1);
+        window.location.hash = hash;
         switchView(hash);
     });
 });
