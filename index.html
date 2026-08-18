@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Vanilla CSS Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=44">
+    <link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
     <!-- App Container -->
@@ -18,10 +18,22 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="brand">
-                <div class="brand-text">
-                    <h1>INTECAP</h1>
-                    <span>Servicios Empresariales Occidente</span>
+                <div class="sidebar-logo-container">
+                    <svg viewBox="0 0 200 60" width="165" height="46" xmlns="http://www.w3.org/2000/svg" class="intecap-sidebar-svg">
+                        <defs>
+                            <linearGradient id="intecapSidebarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#008A4B" />
+                                <stop offset="100%" stop-color="#006838" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Institutional Logo Symbol -->
+                        <rect x="5" y="10" width="40" height="40" rx="10" fill="url(#intecapSidebarGrad)" />
+                        <path d="M15 30 L23 38 L35 22" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        <!-- Brand Text -->
+                        <text x="56" y="38" font-family="'Lexend', sans-serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="1">INTECAP</text>
+                    </svg>
                 </div>
+                <span class="sidebar-brand-subtitle">Servicios Empresariales Occidente</span>
             </div>
             <nav class="nav-menu">
                 <a href="#dashboard" class="nav-item active" id="btn-nav-dashboard">
@@ -585,8 +597,22 @@
     <div class="login-screen active" id="login-screen">
         <div class="login-box">
             <div class="login-brand">
-                <h2>INTECAP</h2>
-                <p>Servicios Empresariales Occidente</p>
+                <div class="login-logo-container">
+                    <svg viewBox="0 0 200 60" width="180" height="54" xmlns="http://www.w3.org/2000/svg" class="intecap-svg-logo">
+                        <defs>
+                            <linearGradient id="intecapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#008A4B" />
+                                <stop offset="100%" stop-color="#005A32" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Institutional Logo Symbol -->
+                        <rect x="5" y="10" width="40" height="40" rx="10" fill="url(#intecapGrad)" />
+                        <path d="M15 30 L23 38 L35 22" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                        <!-- Brand Text -->
+                        <text x="56" y="38" font-family="'Lexend', sans-serif" font-weight="900" font-size="28" fill="var(--text-main)" letter-spacing="1">INTECAP</text>
+                    </svg>
+                </div>
+                <p class="brand-subtitle">Servicios Empresariales • Región Occidente</p>
             </div>
             
             <div class="login-card">
@@ -619,21 +645,21 @@
                     </div>
                     
                     <div class="form-group mt-4" id="login-consultor-group" style="display: none;">
-                        <label for="login-consultor-select">Selecciona tu Nombre</label>
-                        <select id="login-consultor-select">
+                        <label for="login-consultor-select" style="font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; display: block; color: var(--text-main);">Consultor Responsable</label>
+                        <select id="login-consultor-select" style="width: 100%; padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.92rem; outline: none; transition: var(--transition-base);">
                             <option value="">Cargando consultores...</option>
                         </select>
-                        <p class="helper-text error-text" id="login-consultor-empty-msg" style="display: none; color: var(--color-danger); font-size: 0.75rem; margin-top: 4px;">
+                        <p class="helper-text error-text" id="login-consultor-empty-msg" style="display: none; color: var(--color-danger); font-size: 0.75rem; margin-top: 6px;">
                             No hay consultores en la base de datos. Ingresa primero como Administrador e importa un archivo de Excel.
                         </p>
                     </div>
                     
                     <div class="form-group mt-4" id="login-password-group">
-                        <label for="login-password-input">Contraseña de Acceso</label>
-                        <input type="password" id="login-password-input" required placeholder="Ingresa tu contraseña" style="width: 100%; padding: 10px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.9rem;">
+                        <label for="login-password-input" style="font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; display: block; color: var(--text-main);">Contraseña de Acceso</label>
+                        <input type="password" id="login-password-input" required placeholder="••••••••" style="width: 100%; padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.95rem; outline: none; transition: var(--transition-base);">
                     </div>
                     
-                    <button type="submit" class="btn btn-primary w-full mt-4" id="btn-login-submit">
+                    <button type="submit" class="btn btn-primary w-full mt-4" id="btn-login-submit" style="padding: 12px; font-size: 0.95rem; font-weight: 700;">
                         <i data-lucide="log-in"></i>
                         <span>Ingresar al Sistema</span>
                     </button>
@@ -652,6 +678,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=45"></script>
+    <script src="app.js?v=46"></script>
 </body>
 </html>
