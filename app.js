@@ -375,62 +375,66 @@ function initLoginListeners() {
     });
     
     if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
+        loginForm.onsubmit = async function(e) {
             e.preventDefault();
+            
             const selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
             const selectedRole = selectedRoleEl ? selectedRoleEl.value : 'admin';
             const passwordInput = (document.getElementById('login-password-input').value || '').trim();
             
-            try {
-                if (selectedRole === 'admin') {
-                    const adminUser = await db.users.get('Administrador');
-                    const adminPassword = (adminUser && adminUser.password) ? adminUser.password : 'admin';
-                    
-                    if (passwordInput.toLowerCase() === 'admin' || passwordInput === adminPassword) {
-                        await applySession('admin', 'Administrador');
-                        showToast("Bienvenido, Administrador");
-                    } else {
-                        showToast("Contraseña incorrecta. Recuerda que la contraseña por defecto es 'admin'.", "error");
+            if (selectedRole === 'admin') {
+                let isValid = (passwordInput === 'admin');
+                try {
+                    const user = await db.users.get('Administrador');
+                    if (user && user.password) {
+                        isValid = (passwordInput === user.password || passwordInput === 'admin');
                     }
-                } else if (selectedRole === 'supervisor') {
-                    const supervisorUser = await db.users.get('Supervisor');
-                    const supervisorPassword = (supervisorUser && supervisorUser.password) ? supervisorUser.password : 'supervisor';
-                    
-                    if (passwordInput.toLowerCase() === 'supervisor' || passwordInput === supervisorPassword) {
-                        await applySession('supervisor', 'Supervisor');
-                        showToast("Bienvenido, Supervisor");
-                    } else {
-                        showToast("Contraseña incorrecta. Recuerda que la contraseña por defecto es 'supervisor'.", "error");
-                    }
-                } else {
-                    const selectedConsultor = document.getElementById('login-consultor-select').value;
-                    if (!selectedConsultor) {
-                        showToast("Por favor selecciona un consultor de la lista.", "warning");
-                        return;
-                    }
-                    
-                    const consultorUser = await db.users.get(selectedConsultor);
-                    const consultorPassword = (consultorUser && consultorUser.password) ? consultorUser.password : '123';
-                    
-                    if (passwordInput === '123' || passwordInput === consultorPassword) {
-                        await applySession('consultor', selectedConsultor);
-                        showToast(`Bienvenido, ${selectedConsultor}`);
-                    } else {
-                        showToast("Contraseña incorrecta para el consultor seleccionado.", "error");
-                    }
-                }
-            } catch (err) {
-                console.error("Error en login:", err);
-                // Fallback seguro de emergencia
-                if (selectedRole === 'admin' && passwordInput.toLowerCase() === 'admin') {
+                } catch(e) {}
+                
+                if (isValid) {
                     await applySession('admin', 'Administrador');
-                } else if (selectedRole === 'supervisor' && passwordInput.toLowerCase() === 'supervisor') {
-                    await applySession('supervisor', 'Supervisor');
+                    showToast("Bienvenido, Administrador");
                 } else {
-                    showToast("Error al verificar credenciales.", "error");
+                    showToast("Contraseña incorrecta para Administrador (usa: admin)", "error");
+                }
+            } else if (selectedRole === 'supervisor') {
+                let isValid = (passwordInput === 'supervisor');
+                try {
+                    const user = await db.users.get('Supervisor');
+                    if (user && user.password) {
+                        isValid = (passwordInput === user.password || passwordInput === 'supervisor');
+                    }
+                } catch(e) {}
+                
+                if (isValid) {
+                    await applySession('supervisor', 'Supervisor');
+                    showToast("Bienvenido, Supervisor");
+                } else {
+                    showToast("Contraseña incorrecta para Supervisor (usa: supervisor)", "error");
+                }
+            } else {
+                const selectedConsultor = document.getElementById('login-consultor-select').value;
+                if (!selectedConsultor) {
+                    showToast("Por favor selecciona tu nombre en la lista de consultores.", "warning");
+                    return;
+                }
+                
+                let isValid = (passwordInput === '123');
+                try {
+                    const user = await db.users.get(selectedConsultor);
+                    if (user && user.password) {
+                        isValid = (passwordInput === user.password || passwordInput === '123');
+                    }
+                } catch(e) {}
+                
+                if (isValid) {
+                    await applySession('consultor', selectedConsultor);
+                    showToast(`Bienvenido, ${selectedConsultor}`);
+                } else {
+                    showToast("Contraseña incorrecta para el consultor seleccionado (usa: 123)", "error");
                 }
             }
-        });
+        };
     }
     
     if (logoutBtn) {
