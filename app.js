@@ -108,16 +108,17 @@ const CloudSync = {
                     const eventData = {
                         numero_evento: e.numero_evento,
                         nombre_evento: e.nombre_evento,
-                        producto: e.producto,
-                        contraparte: e.contraparte,
-                        consultor: e.consultor,
-                        instructor: e.instructor,
-                        fecha_inicio: e.fecha_inicio,
-                        fecha_fin: e.fecha_fin,
-                        hombres_inscritos: e.hombres_inscritos || 0,
-                        mujeres_inscritas: e.mujeres_inscritas || 0,
-                        total_inscritos: e.total_inscritos || 0,
-                        estado_evento: e.estado_evento,
+                        nombre_producto: e.nombre_producto || '',
+                        contraparte: e.contraparte || '',
+                        consultor: e.consultor || '',
+                        instructor: e.instructor || '',
+                        fecha_inicio: e.fecha_inicio || '',
+                        fecha_fin: e.fecha_fin || '',
+                        hombres_inscritos: Number(e.hombres_inscritos || 0),
+                        mujeres_inscritas: Number(e.mujeres_inscritas || 0),
+                        total_inscritos: Number(e.total_inscritos || 0),
+                        no_inscritos: Number(e.no_inscritos || 0),
+                        estado_evento: e.estado_evento || 'No inscrito',
                         activo: e.activo !== false,
                         followups: followups
                     };
@@ -2085,6 +2086,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(async () => {
         try {
             await CloudSync.syncUsersFromCloud();
+            await populateLoginConsultantsList();
             await CloudSync.syncEventsFromCloud();
             await updateDatabaseStatusText();
             if (activeTab === 'dashboard') renderDashboard();
