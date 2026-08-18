@@ -1295,47 +1295,27 @@ body.role-consultant .admin-supervisor-only {
     max-width: 440px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
 }
 
 .login-brand {
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
 }
 
-.login-logo-container {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 20px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow-sm);
-}
 
-.brand-subtitle {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    letter-spacing: 0.2px;
-}
 
-.sidebar-logo-container {
-    display: flex;
-    align-items: center;
+.login-brand h2 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: 0.5px;
     margin-bottom: 4px;
 }
 
-.sidebar-brand-subtitle {
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.65);
+.login-brand p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
     font-weight: 500;
-    display: block;
-    line-height: 1.2;
 }
 
 .login-card {
@@ -1390,43 +1370,33 @@ body.role-consultant .admin-supervisor-only {
     border: 2px solid var(--border-color);
     background-color: var(--bg-card);
     border-radius: var(--border-radius-md);
-    padding: 18px 14px;
+    padding: 20px 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     font-weight: 600;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--text-muted);
     transition: var(--transition-base);
-    box-shadow: var(--shadow-sm);
 }
 
 .role-card i {
-    width: 26px;
-    height: 26px;
-    stroke-width: 2px;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.role-option:hover .role-card {
-    border-color: #94A3B8;
-    color: var(--text-main);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    width: 28px;
+    height: 28px;
+    stroke-width: 1.75px;
 }
 
 .role-option input[type="radio"]:checked + .role-card {
     border-color: var(--intecap-green);
     background-color: var(--intecap-green-light);
     color: var(--intecap-green);
-    box-shadow: 0 4px 16px rgba(0, 138, 75, 0.2);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 138, 75, 0.1);
 }
 
-.role-option input[type="radio"]:checked + .role-card i {
-    transform: scale(1.1);
-    color: var(--intecap-green);
+.role-option:hover .role-card {
+    border-color: var(--intecap-green);
+    color: var(--text-main);
 }
 
 /* Fix helper text inside login form */

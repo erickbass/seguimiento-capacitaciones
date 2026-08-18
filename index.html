@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lexend:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Vanilla CSS Stylesheet -->
-    <link rel="stylesheet" href="style.css?v=48">
+    <link rel="stylesheet" href="style.css?v=44">
 </head>
 <body>
     <!-- App Container -->
@@ -582,7 +582,7 @@
     </div>
 
     <!-- SCREEN: Login Screen -->
-    <div class="login-screen" id="login-screen">
+    <div class="login-screen active" id="login-screen">
         <div class="login-box">
             <div class="login-brand">
                 <h2>INTECAP</h2>
@@ -598,56 +598,43 @@
                         <label class="role-option">
                             <input type="radio" name="login-role" value="admin" checked>
                             <div class="role-card">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="role-icon">
-                                    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
-                                    <path d="m9 12 2 2 4-4"/>
-                                </svg>
+                                <i data-lucide="shield-check"></i>
                                 <span>Administrador</span>
                             </div>
                         </label>
                         <label class="role-option">
                             <input type="radio" name="login-role" value="supervisor">
                             <div class="role-card">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="role-icon">
-                                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                </svg>
+                                <i data-lucide="eye"></i>
                                 <span>Supervisor</span>
                             </div>
                         </label>
                         <label class="role-option">
                             <input type="radio" name="login-role" value="consultor">
                             <div class="role-card">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="role-icon">
-                                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="12" cy="7" r="4"/>
-                                </svg>
+                                <i data-lucide="user"></i>
                                 <span>Consultor</span>
                             </div>
                         </label>
                     </div>
                     
                     <div class="form-group mt-4" id="login-consultor-group" style="display: none;">
-                        <label for="login-consultor-select" style="font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; display: block; color: var(--text-main);">Consultor Responsable</label>
-                        <select id="login-consultor-select" style="width: 100%; padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.92rem; outline: none; transition: var(--transition-base);">
+                        <label for="login-consultor-select">Selecciona tu Nombre</label>
+                        <select id="login-consultor-select">
                             <option value="">Cargando consultores...</option>
                         </select>
-                        <p class="helper-text error-text" id="login-consultor-empty-msg" style="display: none; color: var(--color-danger); font-size: 0.75rem; margin-top: 6px;">
+                        <p class="helper-text error-text" id="login-consultor-empty-msg" style="display: none; color: var(--color-danger); font-size: 0.75rem; margin-top: 4px;">
                             No hay consultores en la base de datos. Ingresa primero como Administrador e importa un archivo de Excel.
                         </p>
                     </div>
                     
                     <div class="form-group mt-4" id="login-password-group">
-                        <label for="login-password-input" style="font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; display: block; color: var(--text-main);">Contraseña de Acceso</label>
-                        <input type="password" id="login-password-input" required placeholder="••••••••" style="width: 100%; padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.95rem; outline: none; transition: var(--transition-base);">
+                        <label for="login-password-input">Contraseña de Acceso</label>
+                        <input type="password" id="login-password-input" required placeholder="Ingresa tu contraseña" style="width: 100%; padding: 10px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-main); font-size: 0.9rem;">
                     </div>
                     
-                    <button type="button" class="btn btn-primary w-full mt-4" id="btn-login-submit" onclick="handleManualLogin()" style="padding: 12px; font-size: 0.95rem; font-weight: 700;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 6px;">
-                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                            <polyline points="10 17 15 12 10 7"/>
-                            <line x1="15" y1="12" x2="3" y2="12"/>
-                        </svg>
+                    <button type="submit" class="btn btn-primary w-full mt-4" id="btn-login-submit">
+                        <i data-lucide="log-in"></i>
                         <span>Ingresar al Sistema</span>
                     </button>
                 </form>
@@ -656,17 +643,7 @@
     </div>
 
     <!-- Scripts -->
-    <script>
-        function handleManualLogin() {
-            if (window.handleManualLoginApp) {
-                window.handleManualLoginApp();
-            } else if (window.handleManualLogin && window.handleManualLogin !== handleManualLogin) {
-                window.handleManualLogin();
-            }
-        }
-    </script>
     <!-- Libraries Loaded from CDN for seamless user execution without local package setup -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -674,6 +651,6 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
     
     <!-- Application Logic -->
-    <script src="app.js?v=60"></script>
+    <script src="app.js?v=100"></script>
 </body>
 </html>

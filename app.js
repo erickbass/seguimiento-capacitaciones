@@ -1,289 +1,28 @@
-// 1. SUPABASE CLOUD DATABASE INITIALIZATION
-const SUPABASE_URL = 'https://pivngvqanpdwdqklpucw.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_8VIqmFG84Vvg2-eeIgpDsg_6s7tAJjP';
+// Intecap Capacita Tracker - Application Logic
+// Uses Dexie.js for IndexedDB, SheetJS for Excel parsing, and Chart.js for visualization
 
-let supabase = null;
-function getSupabaseClient() {
-    if (!supabase && window.supabase && typeof window.supabase.createClient === 'function') {
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch(e) {
-            console.warn("Error creando cliente Supabase:", e);
-        }
-    }
-    return supabase;
-}
-
-// IndexedDB Fallback / Local Cache
-const localDb = new Dexie('intecap_capacita_db');
-localDb.version(5).stores({
-    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
-    users: 'username, role, password',
-    followups: '++id, numero_evento, date, user, note'
+// 1. DATABASE INITIALIZATION
+const db = new Dexie('intecap_capacita_db');
+db.version(1).stores({
+    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin',
+    participants: '++id, evento_id, nombre, estado'
 });
-
-// Database Adapter (Conecta a Supabase en la nube con compatibilidad transparente y a prueba de fallos)
-const db = {
-    events: {
-        async toArray() {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { data: events, error } = await client.from('events').select('*').order('id', { ascending: false });
-                    if (!error && Array.isArray(events)) {
-                        try {
-                            const { data: followups } = await client.from('followups').select('*');
-                            const fMap = {};
-                            (followups || []).forEach(f => {
-                                if (!fMap[f.numero_evento]) fMap[f.numero_evento] = [];
-                                fMap[f.numero_evento].push(f);
-                            });
-                            return events.map(e => ({
-                                ...e,
-                                followups: fMap[e.numero_evento] || []
-                            }));
-                        } catch(fe) {
-                            return events.map(e => ({ ...e, followups: [] }));
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Supabase fetch failed, trying localDb", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.toArray();
-            } catch(e) {}
-            return [];
-        },
-        async get(id) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { data, error } = await client.from('events').select('*').eq('id', id).single();
-                    if (!error && data) {
-                        try {
-                            const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
-                            return { ...data, followups: followups || [] };
-                        } catch(fe) {
-                            return { ...data, followups: [] };
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Supabase get failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.get(id);
-            } catch(e) {}
-            return null;
-        },
-        async add(eventData) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { followups, ...cleanEvent } = eventData;
-                    const { data, error } = await client.from('events').insert([cleanEvent]).select().single();
-                    if (!error && data) return data.id;
-                } catch (e) {
-                    console.warn("Supabase add failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.add(eventData);
-            } catch(e) {}
-            return Date.now();
-        },
-        async update(id, updates) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { followups, id: _id, ...cleanUpdates } = updates;
-                    cleanUpdates.updated_at = new Date().toISOString();
-                    await client.from('events').update(cleanUpdates).eq('id', id);
-                } catch (e) {
-                    console.warn("Supabase update failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.update(id, updates);
-            } catch(e) {}
-            return 1;
-        },
-        async delete(id) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const event = await this.get(id);
-                    if (event && event.numero_evento) {
-                        await client.from('followups').delete().eq('numero_evento', event.numero_evento);
-                    }
-                    await client.from('events').delete().eq('id', id);
-                } catch (e) {
-                    console.warn("Supabase delete failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.delete(id);
-            } catch(e) {}
-            return 1;
-        },
-        async clear() {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    await client.from('followups').delete().neq('id', 0);
-                    await client.from('events').delete().neq('id', 0);
-                } catch (e) {
-                    console.warn("Supabase clear failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.clear();
-            } catch(e) {}
-        },
-        async count() {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { count, error } = await client.from('events').select('*', { count: 'exact', head: true });
-                    if (!error && typeof count === 'number') return count;
-                } catch (e) {
-                    console.warn("Supabase count failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.events) return await localDb.events.count();
-            } catch(e) {}
-            return 0;
-        },
-        where(field) {
-            return {
-                equals: (val) => ({
-                    first: async () => {
-                        const client = getSupabaseClient();
-                        if (client) {
-                            try {
-                                const { data, error } = await client.from('events').select('*').eq(field, val).maybeSingle();
-                                if (!error && data) {
-                                    try {
-                                        const { data: followups } = await client.from('followups').select('*').eq('numero_evento', data.numero_evento);
-                                        return { ...data, followups: followups || [] };
-                                    } catch(fe) {
-                                        return { ...data, followups: [] };
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn("Supabase where query failed", e);
-                            }
-                        }
-                        try {
-                            if (localDb && localDb.events) return await localDb.events.where(field).equals(val).first();
-                        } catch(e) {}
-                        return null;
-                    }
-                })
-            };
-        }
-    },
-    users: {
-        async toArray() {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { data, error } = await client.from('users').select('*').order('username');
-                    if (!error && Array.isArray(data)) return data;
-                } catch (e) {
-                    console.warn("Supabase users fetch failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.users) return await localDb.users.toArray();
-            } catch(e) {}
-            return [];
-        },
-        async get(username) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { data, error } = await client.from('users').select('*').eq('username', username).maybeSingle();
-                    if (!error && data) return data;
-                } catch (e) {
-                    console.warn("Supabase user get failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.users) return await localDb.users.get(username);
-            } catch(e) {}
-            return null;
-        },
-        async put(userObj) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    await client.from('users').upsert([userObj], { onConflict: 'username' });
-                } catch (e) {
-                    console.warn("Supabase user put failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.users) return await localDb.users.put(userObj);
-            } catch(e) {}
-            return userObj.username;
-        },
-        async delete(username) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    await client.from('users').delete().eq('username', username);
-                } catch (e) {
-                    console.warn("Supabase user delete failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.users) return await localDb.users.delete(username);
-            } catch(e) {}
-            return 1;
-        },
-        where(field) {
-            return {
-                equals: (val) => ({
-                    toArray: async () => {
-                        const client = getSupabaseClient();
-                        if (client) {
-                            try {
-                                const { data, error } = await client.from('users').select('*').eq(field, val).order('username');
-                                if (!error && Array.isArray(data)) return data;
-                            } catch (e) {
-                                console.warn("Supabase users where failed", e);
-                            }
-                        }
-                        try {
-                            if (localDb && localDb.users) return await localDb.users.where(field).equals(val).toArray();
-                        } catch(e) {}
-                        return [];
-                    }
-                })
-            };
-        }
-    },
-    followups: {
-        async add(followupObj) {
-            const client = getSupabaseClient();
-            if (client) {
-                try {
-                    const { data, error } = await client.from('followups').insert([followupObj]).select().single();
-                    if (!error && data) return data.id;
-                } catch (e) {
-                    console.warn("Supabase followup add failed", e);
-                }
-            }
-            try {
-                if (localDb && localDb.followups) return await localDb.followups.add(followupObj);
-            } catch(e) {}
-            return Date.now();
-        }
-    }
-};
+db.version(2).stores({
+    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento',
+    participants: null
+});
+db.version(3).stores({
+    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento',
+    users: 'username, role, password'
+});
+db.version(4).stores({
+    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
+    users: 'username, role, password'
+});
+db.version(5).stores({
+    events: '++id, numero_evento, nombre_evento, consultor, instructor, fecha_inicio, fecha_fin, estado_evento, contraparte',
+    users: 'username, role, password'
+});
 
 // Create indexes to speed up participant queries
 // Dexie supports multi-entry or compound indexes, but simple indexing is enough for our size.
@@ -366,7 +105,6 @@ async function applySession(role, name) {
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
         loginScreen.classList.remove('active');
-        loginScreen.style.display = 'none';
     }
     
     // Redirigir si no es admin y está en pestaña no permitida
@@ -387,7 +125,6 @@ function logout() {
     
     const loginScreen = document.getElementById('login-screen');
     if (loginScreen) {
-        loginScreen.style.display = 'flex';
         loginScreen.classList.add('active');
     }
     
@@ -432,56 +169,6 @@ async function populateLoginConsultantsList() {
     }
 }
 
-window.handleManualLoginApp = window.handleManualLogin = async function() {
-    try {
-        const selectedRoleEl = document.querySelector('input[name="login-role"]:checked');
-        const selectedRole = selectedRoleEl ? selectedRoleEl.value : 'admin';
-        const passwordInput = (document.getElementById('login-password-input').value || '').trim();
-        
-        console.log("Intentando login con rol:", selectedRole, "y pass:", passwordInput);
-        
-        if (selectedRole === 'admin') {
-            if (passwordInput.toLowerCase() === 'admin' || passwordInput === '') {
-                await applySession('admin', 'Administrador');
-                showToast("Bienvenido, Administrador");
-                return;
-            } else {
-                showToast("Contraseña incorrecta para Administrador (escribe: admin)", "error");
-                return;
-            }
-        } else if (selectedRole === 'supervisor') {
-            if (passwordInput.toLowerCase() === 'supervisor' || passwordInput === '') {
-                await applySession('supervisor', 'Supervisor');
-                showToast("Bienvenido, Supervisor");
-                return;
-            } else {
-                showToast("Contraseña incorrecta para Supervisor (escribe: supervisor)", "error");
-                return;
-            }
-        } else {
-            const selectEl = document.getElementById('login-consultor-select');
-            const selectedConsultor = selectEl ? selectEl.value : '';
-            if (!selectedConsultor) {
-                showToast("Por favor selecciona tu nombre en la lista de consultores.", "warning");
-                return;
-            }
-            
-            if (passwordInput === '123' || passwordInput === '') {
-                await applySession('consultor', selectedConsultor);
-                showToast(`Bienvenido, ${selectedConsultor}`);
-                return;
-            } else {
-                showToast("Contraseña incorrecta para el consultor (escribe: 123)", "error");
-                return;
-            }
-        }
-    } catch(e) {
-        console.error("Error crítico en handleManualLogin:", e);
-        // Respaldo absoluto para no dejar al usuario bloqueado
-        await applySession('admin', 'Administrador');
-    }
-};
-
 function initLoginListeners() {
     const roleRadios = document.querySelectorAll('input[name="login-role"]');
     const consultorGroup = document.getElementById('login-consultor-group');
@@ -491,18 +178,54 @@ function initLoginListeners() {
     roleRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.value === 'consultor') {
-                if (consultorGroup) consultorGroup.style.display = 'block';
+                consultorGroup.style.display = 'block';
             } else {
-                if (consultorGroup) consultorGroup.style.display = 'none';
+                consultorGroup.style.display = 'none';
             }
         });
     });
     
     if (loginForm) {
-        loginForm.onsubmit = function(e) {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            window.handleManualLogin();
-        };
+            const selectedRole = document.querySelector('input[name="login-role"]:checked').value;
+            const passwordInput = document.getElementById('login-password-input').value.trim();
+            
+            if (selectedRole === 'admin') {
+                const adminUser = await db.users.get('Administrador');
+                const adminPassword = adminUser ? adminUser.password : 'admin';
+                
+                if (passwordInput !== adminPassword) {
+                    showToast("Contraseña de administrador incorrecta.", "error");
+                    return;
+                }
+                await applySession('admin', 'Administrador');
+            } else if (selectedRole === 'supervisor') {
+                const supervisorUser = await db.users.get('Supervisor');
+                const supervisorPassword = supervisorUser ? supervisorUser.password : 'supervisor';
+                
+                if (passwordInput !== supervisorPassword) {
+                    showToast("Contraseña de supervisor incorrecta.", "error");
+                    return;
+                }
+                await applySession('supervisor', 'Supervisor');
+            } else {
+                const selectedConsultor = document.getElementById('login-consultor-select').value;
+                if (!selectedConsultor) {
+                    showToast("Por favor selecciona un consultor válido.", "warning");
+                    return;
+                }
+                
+                const consultorUser = await db.users.get(selectedConsultor);
+                const consultorPassword = consultorUser ? consultorUser.password : '123';
+                
+                if (passwordInput !== consultorPassword) {
+                    showToast("Contraseña incorrecta para el consultor seleccionado.", "error");
+                    return;
+                }
+                await applySession('consultor', selectedConsultor);
+            }
+        });
     }
     
     if (logoutBtn) {
@@ -522,49 +245,35 @@ function initIcons() {
 
 // 2. TOAST NOTIFICATION SYSTEM
 function showToast(message, type = 'success') {
-    try {
-        if (toastMessageEl) toastMessageEl.textContent = message;
-        if (toastEl) toastEl.className = `toast active ${type}`;
-        
-        // Set appropriate icon
-        let iconName = 'check-circle';
-        if (type === 'error') iconName = 'alert-triangle';
-        if (type === 'warning') iconName = 'alert-circle';
-        if (type === 'info') iconName = 'info';
-        
-        if (toastIconEl && typeof toastIconEl.setAttribute === 'function') {
-            toastIconEl.setAttribute('data-lucide', iconName);
-        }
-        initIcons();
+    toastMessageEl.textContent = message;
+    toastEl.className = `toast active ${type}`;
+    
+    // Set appropriate icon
+    let iconName = 'check-circle';
+    if (type === 'error') iconName = 'alert-triangle';
+    if (type === 'warning') iconName = 'alert-circle';
+    if (type === 'info') iconName = 'info';
+    
+    toastIconEl.setAttribute('data-lucide', iconName);
+    initIcons();
 
-        if (toastEl) {
-            setTimeout(() => {
-                toastEl.classList.remove('active');
-            }, 4000);
-        }
-    } catch (e) {
-        console.log("Toast message:", message);
-    }
+    setTimeout(() => {
+        toastEl.classList.remove('active');
+    }, 4000);
 }
 
 // 3. NAVIGATION CONTROL
 function switchView(viewId) {
-    const allViews = document.querySelectorAll('.content-view');
-    const allNavItems = document.querySelectorAll('.nav-item');
-    const titleEl = document.getElementById('page-title');
-    
-    allViews.forEach(view => {
+    views.forEach(view => {
         view.classList.remove('active');
-        view.style.display = 'none';
     });
     
     const targetView = document.getElementById(`view-${viewId}`);
     if (targetView) {
         targetView.classList.add('active');
-        targetView.style.display = 'block';
     }
 
-    allNavItems.forEach(item => {
+    navItems.forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('href') === `#${viewId}`) {
             item.classList.add('active');
@@ -579,9 +288,7 @@ function switchView(viewId) {
         'importar': 'Importar Archivo de Excel',
         'usuarios': 'Gestión de Usuarios y Accesos'
     };
-    if (titleEl) {
-        titleEl.textContent = titles[viewId] || 'Gestor de Capacitaciones';
-    }
+    pageTitleEl.textContent = titles[viewId] || 'Gestor de Capacitaciones';
     activeTab = viewId;
 
     if (viewId === 'dashboard') {
@@ -601,7 +308,7 @@ function switchView(viewId) {
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.substring(1) || 'dashboard';
     // Validate hash
-    if (['dashboard', 'eventos', 'reportes', 'importar', 'usuarios'].includes(hash)) {
+    if (['dashboard', 'eventos', 'importar', 'usuarios'].includes(hash)) {
         switchView(hash);
     }
 });
@@ -1866,21 +1573,17 @@ document.getElementById('form-add-followup').addEventListener('submit', async (e
             return;
         }
         
-        const newFollowup = {
-            numero_evento: event.numero_evento,
+        event.followups = event.followups || [];
+        event.followups.push({
+            id: Date.now(),
             date: new Date().toISOString(),
             user: currentUserName,
             note: note,
             evidence: evidenceBase64
-        };
+        });
         
-        await db.followups.add(newFollowup);
-        
-        // Actualizar el array local del evento para renderizado inmediato
-        event.followups = event.followups || [];
-        event.followups.push(newFollowup);
-        
-        showToast("Seguimiento registrado con éxito en la nube.");
+        await db.events.put(event);
+        showToast("Seguimiento registrado con éxito.");
         
         // Reset form
         document.getElementById('form-add-followup').reset();
@@ -2235,9 +1938,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Set active navigation button state initially if user visits manual links
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
-        e.preventDefault();
         const hash = item.getAttribute('href').substring(1);
-        window.location.hash = hash;
         switchView(hash);
     });
 });
