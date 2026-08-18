@@ -49,6 +49,17 @@ const CloudSync = {
         try {
             const { data: cloudUsers, error } = await client.from('users').select('*');
             if (!error && Array.isArray(cloudUsers) && cloudUsers.length > 0) {
+                // Obtener nombres vigentes en la nube
+                const validUsernames = new Set(cloudUsers.map(u => u.username));
+                
+                // Limpiar usuarios locales que ya no existen en la nube (como Sofia)
+                const localUsers = await db.users.toArray();
+                for (const lu of localUsers) {
+                    if (lu.role === 'consultor' && !validUsernames.has(lu.username)) {
+                        await db.users.delete(lu.username);
+                    }
+                }
+                
                 for (const u of cloudUsers) {
                     await db.users.put({
                         username: u.username,
@@ -80,13 +91,36 @@ const CloudSync = {
         }
     },
     
-    // Sincronizar eventos desde la nube a local
+    // Sincronizar todos los eventos desde la nube a local con paginación completa
     async syncEventsFromCloud() {
         const client = getSupabase();
         if (!client) return;
         try {
-            const { data: cloudEvents, error } = await client.from('events').select('*');
-            if (!error && Array.isArray(cloudEvents) && cloudEvents.length > 0) {
+            // 1. Descargar todos los eventos manejando el límite de 1000 de Supabase
+            let allCloudEvents = [];
+            let from = 0;
+            const pageSize = 1000;
+            let hasMore = true;
+            
+            while (hasMore) {
+                const { data: pageEvents, error } = await client
+                    .from('events')
+                    .select('*')
+                    .range(from, from + pageSize - 1);
+                
+                if (error || !pageEvents || pageEvents.length === 0) {
+                    hasMore = false;
+                } else {
+                    allCloudEvents = allCloudEvents.concat(pageEvents);
+                    if (pageEvents.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        from += pageSize;
+                    }
+                }
+            }
+            
+            if (allCloudEvents.length > 0) {
                 // Obtener seguimientos de la nube
                 const { data: cloudFollowups } = await client.from('followups').select('*');
                 const fMap = {};
@@ -101,7 +135,7 @@ const CloudSync = {
                     });
                 });
                 
-                for (const e of cloudEvents) {
+                for (const e of allCloudEvents) {
                     const localEvent = await db.events.where('numero_evento').equals(e.numero_evento).first();
                     const followups = fMap[e.numero_evento] || [];
                     
@@ -129,7 +163,7 @@ const CloudSync = {
                         await db.events.add(eventData);
                     }
                 }
-                console.log("Eventos sincronizados desde la nube:", cloudEvents.length);
+                console.log("Total eventos sincronizados desde la nube:", allCloudEvents.length);
             }
         } catch(e) {
             console.warn("Error en syncEventsFromCloud:", e);
