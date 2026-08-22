@@ -734,11 +734,11 @@ function processUploadedFile(file) {
                 const autorizacion_1 = String(row[22] || '').trim(); // Columna W
                 const autorizacion_2 = String(row[23] || '').trim(); // Columna X
                 
-                // Regla de Negocio: Si ambas autorizaciones son 'No', el evento NO está autorizado y se descarta
+                // Regla de Negocio: Si por lo menos una de las autorizaciones tiene 'No', el evento se descarta
                 const isAuto1No = autorizacion_1.toLowerCase() === 'no';
                 const isAuto2No = autorizacion_2.toLowerCase() === 'no';
-                if (isAuto1No && isAuto2No) {
-                    continue; // Omitir evento no autorizado
+                if (isAuto1No || isAuto2No) {
+                    continue; // Omitir evento si cualquiera de las dos dice 'No'
                 }
                 
                 const estado_evento = String(row[24] || 'No inscrito').trim();
