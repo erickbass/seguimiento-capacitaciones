@@ -1616,6 +1616,8 @@ async function initUsers() {
             });
         }
         await db.users.delete('Erick Aguilar');
+        await db.users.delete('Sofia Castillo');
+        await db.users.delete('Sofia');
     } catch (err) {
         console.error("Error inicializando usuarios:", err);
     }
