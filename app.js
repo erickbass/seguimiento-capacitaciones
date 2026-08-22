@@ -135,7 +135,20 @@ const CloudSync = {
                     });
                 });
                 
+                // Purgar eventos locales eliminados de la nube o eventos de prueba
+                const cloudEventNumbers = new Set(allCloudEvents.map(e => e.numero_evento));
+                const localEvents = await db.events.toArray();
+                for (const le of localEvents) {
+                    const isInvalidConsultant = (le.consultor || '').toLowerCase().includes('sofia') || (le.consultor || '').toLowerCase().includes('erick');
+                    if (!cloudEventNumbers.has(le.numero_evento) || isInvalidConsultant) {
+                        await db.events.delete(le.id);
+                    }
+                }
+                
                 for (const e of allCloudEvents) {
+                    const isInvalidConsultant = (e.consultor || '').toLowerCase().includes('sofia') || (e.consultor || '').toLowerCase().includes('erick');
+                    if (isInvalidConsultant) continue;
+                    
                     const localEvent = await db.events.where('numero_evento').equals(e.numero_evento).first();
                     const followups = fMap[e.numero_evento] || [];
                     
