@@ -731,6 +731,16 @@ function processUploadedFile(file) {
                 const cApellido = String(row[18] || '').trim();
                 const consultor = `${cNombre} ${cApellido}`.trim() || 'No Asignado';
                 
+                const autorizacion_1 = String(row[22] || '').trim(); // Columna W
+                const autorizacion_2 = String(row[23] || '').trim(); // Columna X
+                
+                // Regla de Negocio: Si ambas autorizaciones son 'No', el evento NO está autorizado y se descarta
+                const isAuto1No = autorizacion_1.toLowerCase() === 'no';
+                const isAuto2No = autorizacion_2.toLowerCase() === 'no';
+                if (isAuto1No && isAuto2No) {
+                    continue; // Omitir evento no autorizado
+                }
+                
                 const estado_evento = String(row[24] || 'No inscrito').trim();
                 const contraparte = String(row[25] || '').trim() || 'No Asignada';
                 const instructor = String(row[26] || '').trim() || 'No Asignado';
@@ -754,6 +764,8 @@ function processUploadedFile(file) {
                         total_inscritos,
                         no_inscritos,
                         consultor,
+                        autorizacion_1,
+                        autorizacion_2,
                         estado_evento,
                         contraparte,
                         instructor,
@@ -773,6 +785,8 @@ function processUploadedFile(file) {
                         total_inscritos,
                         no_inscritos,
                         consultor,
+                        autorizacion_1,
+                        autorizacion_2,
                         estado_evento,
                         contraparte,
                         instructor,
@@ -1366,6 +1380,8 @@ async function openEventDetailModal(eventId) {
     document.getElementById('detail-contraparte').textContent = event.contraparte || 'No Asignada';
     document.getElementById('detail-event-status').textContent = event.estado_evento || 'No inscrito';
     document.getElementById('detail-instructor-name').textContent = event.instructor || 'No Asignado';
+    document.getElementById('detail-auto1').textContent = event.autorizacion_1 || 'No especificada';
+    document.getElementById('detail-auto2').textContent = event.autorizacion_2 || 'No especificada';
     
     // Tab 2: Populate Edit Form fields
     document.getElementById('edit-event-id').value = event.id;
